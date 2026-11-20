@@ -1,0 +1,21 @@
+{
+  "name": "it-room-checkin",
+  "version": "1.0.0",
+  "description": "IT机房运维现场打卡服务（移动端H5 + Node/SQLite轻量后端）",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "start:https": "cross-env SSL_KEY=./certs/key.pem SSL_CERT=./certs/cert.pem node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.3.0",
+    "express": "^4.19.2",
+    "multer": "^2.5.0"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3"
+  }
+}
