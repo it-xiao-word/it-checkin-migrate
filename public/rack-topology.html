@@ -1,0 +1,1952 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>机柜连线拓扑</title>
+<!-- 导出依赖本地化：机房内网常常无法访问公网，放本地 vendor 目录 -->
+<script src="/vendor/html2canvas.min.js"></script>
+<script src="/vendor/jspdf.umd.min.js"></script>
+<script src="/vendor/xlsx.full.min.js"></script>
+<script src="/js/auth.js"></script>
+<script src="/js/topology-sync.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Microsoft YaHei","微软雅黑",-apple-system,"Segoe UI",sans-serif;color:#263238;transition:background .25s}
+body.theme-dark{background:#e8ebef;background-image:linear-gradient(#dfe3e8 1px,transparent 1px),linear-gradient(90deg,#dfe3e8 1px,transparent 1px);background-size:24px 24px}
+body.theme-light{background:#eef1f5}
+
+/* ============ 顶栏 ============ */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;padding:9px 16px 10px;background:linear-gradient(180deg,#fff,#fbfcfe);border-bottom:1px solid #d7dde5;box-shadow:0 2px 12px rgba(31,59,90,.08);pointer-events:none}
+/* 顶栏容器对鼠标穿透：滚动后其下方画布的连线控制点仍可拖动；仅实际控件接收事件 */
+.topbar .btn,.topbar input,.topbar select{pointer-events:auto}
+/* 品牌区 */
+.brand{display:flex;align-items:center;gap:9px;padding-right:13px;margin-right:1px;border-right:1px solid #e3e8ee}
+.brand-mark{width:34px;height:34px;flex:none;border-radius:9px;background:linear-gradient(135deg,#2a5180,#1f3b5a);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 6px rgba(31,59,90,.28)}
+.brand h1{font-size:15px;font-weight:800;color:#1f3b5a;white-space:nowrap;letter-spacing:.3px;line-height:1.15}
+.brand-sub{display:block;font-size:9px;color:#9aa7b4;font-weight:400;letter-spacing:.7px;margin-top:2px}
+/* 功能分组卡片 */
+.tb-group{display:flex;flex-direction:column;gap:4px;padding:5px 10px 7px;background:#f5f8fb;border:1px solid #e5ebf2;border-radius:9px}
+.tb-glabel{font-size:9px;font-weight:800;color:#9aa7b4;letter-spacing:1.5px;line-height:1;padding-left:2px}
+.tb-gbody{display:flex;align-items:center;gap:5px}
+.zoombox{display:flex;align-items:center;gap:4px}
+.zoombox #zoomVal{min-width:44px;text-align:center;display:inline-block;font-weight:700;color:#1f3b5a;font-size:12px}
+.btn{border:1px solid #d3dbe3;background:#fff;color:#37474f;border-radius:6px;padding:6px 11px;font-size:12px;cursor:pointer;transition:background .15s,border-color .15s,transform .08s,box-shadow .15s;white-space:nowrap;line-height:1.2}
+.btn:hover{background:#f0f4f8;border-color:#90a4ae}
+.btn:active{transform:translateY(1px)}
+.btn:focus-visible{outline:2px solid #64b5f6;outline-offset:1px}
+.btn.primary{background:linear-gradient(180deg,#2a5180,#1f3b5a);color:#fff;border-color:#1f3b5a;box-shadow:0 1px 3px rgba(31,59,90,.25)}
+.btn.primary:hover{background:#2a5180}
+.btn.danger{background:#e53935;color:#fff;border-color:#e53935}
+.btn.danger:hover{background:#c62828}
+.btn.icon{width:32px;padding:6px 0;text-align:center;font-size:16px;line-height:1;color:#1f3b5a;font-weight:700}
+.btn:disabled{opacity:.42;cursor:not-allowed}
+.sep{width:1px;height:22px;background:#dfe3e8;margin:0 3px}
+.switch{display:flex;align-items:center;gap:6px;font-size:12px;color:#546e7a}
+.hint{font-size:11px;color:#90a4ae;white-space:nowrap;align-self:center}
+.room-name{border:1px dashed #90a4ae;background:#f5f9ff;color:#1f3b5a;font-size:13px;font-weight:700;border-radius:6px;padding:5px 8px;width:130px;font-family:inherit}
+.room-name:focus{outline:none;border-style:solid;border-color:#1f3b5a}
+.room-title{position:absolute;font-size:19px;font-weight:800;color:#1f3b5a;letter-spacing:1px;padding:5px 10px;background:rgba(255,255,255,.75);border:1px dashed #b0bec5;border-radius:6px;cursor:move;user-select:none;z-index:20;white-space:nowrap}
+.room-title:active,.rack-card.moving{cursor:grabbing}
+/* 画布文本框标注 */
+.textbox{position:absolute;z-index:24;border:1px solid transparent;border-radius:6px;background:rgba(255,255,255,.02);cursor:grab;user-select:none}
+.textbox:hover{border-color:#90a4ae}
+.textbox.moving{cursor:grabbing;border-color:#1f3b5a}
+.tb-bar{position:absolute;left:0;top:-21px;display:flex;align-items:center;gap:5px;height:20px;padding:0 6px;background:#1f3b5a;color:#fff;border-radius:5px 5px 0 0;font-size:10px;letter-spacing:.3px;opacity:0;transition:opacity .15s;z-index:25;box-shadow:0 -1px 5px rgba(0,0,0,.25)}
+.textbox:hover .tb-bar{opacity:1}
+.tb-grip{font-size:11px;opacity:.85}
+.tb-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-bar .tb-act{cursor:pointer;width:16px;height:16px;line-height:14px;text-align:center;border-radius:3px;color:#fff;font-size:12px}
+.tb-bar .tb-act:hover{background:rgba(255,255,255,.25)}
+.tb-text{white-space:pre-wrap;word-break:break-word;padding:6px 9px;line-height:1.45;cursor:default}
+body.theme-light .tb-bar{background:#1f3b5a}
+
+/* ============ 对齐工具条 ============ */
+.alignbar{flex-basis:100%;display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:7px 16px;margin:2px -16px -9px;background:#f4f7fa;border-top:1px solid #e3e8ee}
+.alignbar .lb{font-size:12px;font-weight:700;color:#1f3b5a;white-space:nowrap}
+.alignbar .btn{padding:5px 11px;font-size:11px}
+.alignbar .btn.on{background:#1f3b5a;color:#fff;border-color:#1f3b5a}
+.alignbar .cnt{font-size:11px;color:#607d8b;min-width:70px;white-space:nowrap}
+.alignbar .glabel{font-size:11px;color:#78909c;white-space:nowrap}
+.alignbar .tipx{font-size:11px;color:#90a4ae;margin-left:auto}
+
+/* ============ 画布 ============ */
+#stage{position:relative}
+#exportArea{transform-origin:0 0;will-change:transform}
+.canvas{position:relative;padding:0;min-height:560px}
+.rack-card{position:absolute;background:#1c2128;border:2px solid #2b323b;border-radius:14px;overflow:hidden;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.rack-card.focus{box-shadow:0 0 0 3px #ffb300,0 10px 28px rgba(0,0,0,.35)}
+.rack-card.sel{box-shadow:0 0 0 3px #1e88e5,0 10px 28px rgba(0,0,0,.35)}
+.rack-card.sel::after{content:"✓";position:absolute;top:6px;left:8px;z-index:12;background:#1e88e5;color:#fff;font-size:11px;width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.rack-head{padding:11px 14px;background:linear-gradient(180deg,#2b323b,#20262d);display:flex;justify-content:space-between;align-items:center;cursor:move;border-bottom:1px solid #111;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+.rack-head .rname{font-size:15px;font-weight:700;color:#f5f7fa;letter-spacing:.5px}
+.rack-head .rmeta{display:flex;align-items:center;gap:8px;font-size:11px;color:#9aa7b4}
+.dot{width:7px;height:7px;border-radius:50%;background:#43a047;box-shadow:0 0 6px #43a047}
+.rack-body{position:relative;background:repeating-linear-gradient(135deg,#232a32,#232a32 6px,#20272e 6px,#20272e 12px);overflow:hidden}
+.rack-body::before,.rack-body::after{content:"";position:absolute;left:0;right:0;height:2px;background:#111;z-index:1}
+.rack-body::before{top:0}.rack-body::after{bottom:0}
+
+/* 设备条 */
+.device{position:absolute;left:26px;right:26px;display:flex;align-items:center;border-radius:4px;overflow:hidden;cursor:grab;user-select:none;box-shadow:0 1px 4px rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.08);z-index:3}
+.device:active{cursor:grabbing}
+.device.selected{outline:2px solid #ffd54f;outline-offset:-2px}
+.device.dragging{opacity:.85;z-index:9;box-shadow:0 6px 16px rgba(0,0,0,.6)}
+.dev-stripe{width:5px;align-self:stretch;flex:0 0 5px}
+.dev-main{flex:1;min-width:0;padding:0 6px;display:flex;flex-direction:column;justify-content:center;gap:1px}
+.dev-title{display:flex;align-items:center;gap:5px;min-width:0}
+.dev-title .dev-name{flex:1;min-width:0}
+.dev-name{font-size:10.5px;color:#fff;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15}
+.dev-model{font-size:8.5px;color:#b0bec5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.1}
+.dev-right{display:flex;align-items:center;gap:5px;padding-right:6px}
+.ports{display:grid;grid-template-columns:repeat(4,4px);grid-auto-rows:4px;gap:2px}
+.ports i{width:4px;height:4px;border-radius:1px;background:#0d141b;border:1px solid #4a5866}
+.ports.net{grid-template-columns:repeat(6,4px)}
+.leds{display:flex;align-items:center;flex:0 0 auto}
+.leds i{width:7px;height:7px;border-radius:50%;box-shadow:0 0 5px currentColor;border:1px solid rgba(0,0,0,.25)}
+.u-ruler{position:absolute;top:0;right:0;bottom:0;width:26px;z-index:4;display:flex;flex-direction:column;background:rgba(0,0,0,.22);border-left:1px solid rgba(255,255,255,.1)}
+.u-ruler-l{left:0;right:auto;border-left:0;border-right:1px solid rgba(255,255,255,.1)}
+.u-ruler span{flex:1;display:flex;align-items:center;justify-content:center;font-size:8px;color:#94a3b0;border-bottom:1px solid rgba(255,255,255,.05)}
+.u-ruler span.hi{background:rgba(255,213,79,.28);color:#ffe082;font-weight:700}
+.blank-dev{background:linear-gradient(180deg,#3a424b,#2f373f)!important}
+.blank-dev .dev-name{color:#aab4bf;font-weight:400}
+.idle{position:absolute;left:calc(50% + 4px);transform:translate(-50%,-50%);background:rgba(76,175,80,.14);border:1px dashed rgba(120,200,130,.5);color:#9ccc65;border-radius:5px;font-size:10px;padding:3px 8px;white-space:nowrap;z-index:2;text-align:center;line-height:1.3}
+.blank-hint{position:absolute;inset:0;z-index:5;cursor:crosshair}
+
+/* ============ 端口 & 连线 ============ */
+.port{position:absolute;min-width:26px;height:12px;padding:0 3px;background:#eceff1;border:1px solid #78909c;border-radius:2px;color:#263238;font-size:8px;line-height:10px;text-align:center;cursor:crosshair;user-select:none;z-index:9;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.port.side-right{right:27px;border-radius:3px 0 0 3px}
+.port.side-left{left:27px;border-radius:0 3px 3px 0}
+.port:hover,.port.hot{background:#fff176;border-color:#f9a825;color:#e65100}
+.port.linking{background:#81d4fa;border-color:#0288d1;animation:pulse .7s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 4px rgba(2,136,209,.35)}}
+body.theme-light .port{background:#fff;border-color:#1976d2;color:#0d47a1;box-shadow:none}
+.wire-layer{position:absolute;left:0;top:0;pointer-events:none;z-index:7;overflow:visible}
+.wire-layer path.wire{pointer-events:stroke;cursor:pointer}
+.wire-layer path.wire:hover{stroke-width:4!important}
+.wire-layer path.wire.sel{stroke-width:4!important;filter:drop-shadow(0 0 4px rgba(255,235,59,.9))}
+.wire-hit{fill:none;stroke:transparent;stroke-width:10;pointer-events:stroke;cursor:pointer}
+.wire-handle{fill:#fff;stroke:#1f3b5a;stroke-width:2;pointer-events:all;cursor:move;opacity:.85}
+.wire-handle:hover,.wire-handle.dragging{fill:#ffeb3b;stroke:#e65100;r:7;opacity:1}
+.tip-wire{background:#e3f2fd;border:1px solid #90caf9;color:#0d47a1}
+@media print{.wire-layer{display:none}}
+
+/* ============ 浅色刻度主题 ============ */
+body.theme-light .rack-card{background:#fff;border:2px solid #b0bec5;border-radius:14px;box-shadow:0 3px 12px rgba(0,0,0,.08)}
+body.theme-light .rack-head{background:#e8eef5;color:#263238;border-bottom:1px solid #cfd8dc}
+body.theme-light .rack-head .rname{color:#1f3b5a}
+body.theme-light .rack-head .rmeta{color:#607d8b}
+body.theme-light .rack-body{background:#fff;overflow:visible}
+body.theme-light .rack-body::before,body.theme-light .rack-body::after{display:none}
+body.theme-light .u-cells{position:relative;margin:0 26px 0 26px;border-left:1px solid #cfd8dc;border-right:1px solid #cfd8dc}
+.u-row{position:relative;border-bottom:1px dashed #d7dde3}
+.u-row .plus{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);color:#b0bec5;font-size:10px;line-height:1}
+body.theme-light .u-ruler{background:#f0f4f8;border-left:1px solid #cfd8dc}
+body.theme-light .u-ruler-l{border-left:0;border-right:1px solid #cfd8dc}
+body.theme-light .u-ruler span{color:#607d8b;border-bottom:1px solid #e3e8ee}
+body.theme-light .u-ruler span.hi{background:#ffe082;color:#e65100}
+body.theme-light .device{left:26px;right:26px;border-radius:2px;border:1px solid #1976d2;box-shadow:none;background:#bbdefb}
+body.theme-light .device.selected{outline:2px solid #ff8f00}
+body.theme-light .dev-stripe{display:none}
+/* 设备名/型号版式与深色完全一致（灯+名称一行、型号一行、左对齐），仅颜色适配浅色 */
+body.theme-light .dev-name{color:#0d47a1}
+body.theme-light .dev-model{color:#455a64}
+body.theme-light .ports{display:none}
+body.theme-light .blank-dev{background:#eceff1!important;border-color:#90a4ae!important}
+body.theme-light .blank-dev .dev-name{color:#607d8b}
+body.theme-light .idle{display:none}
+.rack-actions{display:none;gap:6px;padding:8px;background:#f5f7fa;border-top:1px solid #e0e5eb}
+.rack-card.sel .rack-actions{display:flex}
+.rack-actions .btn{flex:1;font-size:11px;padding:5px 4px}
+body.theme-dark .rack-actions .btn{background:#2b323b;color:#cfd8dc;border-color:#3c4652}
+body.theme-dark .rack-actions .btn.del{background:#c62828;color:#fff;border-color:#c62828}
+
+/* ============ 编辑抽屉 ============ */
+.drawer{position:fixed;top:0;right:0;width:344px;max-width:92vw;height:100vh;background:#fff;box-shadow:-8px 0 30px rgba(31,59,90,.22);z-index:100;transform:translateX(105%);transition:transform .3s cubic-bezier(.22,.61,.36,1);display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer h2{font-size:15px;font-weight:700;color:#fff;padding:17px 20px;background:linear-gradient(120deg,#1f3b5a,#2a5180);border-bottom:1px solid #18304a;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 8px rgba(31,59,90,.18)}
+.drawer h2 .x{cursor:pointer;color:rgba(255,255,255,.75);font-size:22px;line-height:1;transition:color .15s}
+.drawer h2 .x:hover{color:#fff}
+.form{padding:18px 20px;overflow:auto;flex:1;background:#fafbfc}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:11px;color:#607d8b;margin-bottom:5px}
+.field input,.field select,.field textarea{width:100%;border:1px solid #cfd8dc;border-radius:6px;padding:8px 9px;font-size:13px;font-family:inherit;color:#263238;background:#fff}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#1f3b5a;box-shadow:0 0 0 3px rgba(31,59,90,.13);background:#fff}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.swatches{display:flex;gap:6px;flex-wrap:wrap}
+.sw{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid transparent}
+.sw.sel{border-color:#263238;transform:scale(1.1)}
+.status-group{display:flex;gap:6px}
+.status-group button{flex:1;padding:6px 2px;border:1px solid #cfd8dc;background:#fff;border-radius:6px;font-size:11px;cursor:pointer}
+.status-group button.sel{background:#1f3b5a;color:#fff;border-color:#1f3b5a}
+.ports-edit{display:flex;flex-direction:column;gap:6px}
+.port-row{display:flex;gap:6px;align-items:center}
+.port-row input{flex:1;min-width:0}
+.port-row select{width:52px;flex:0 0 52px;padding:5px 2px;border:1px solid #cfd8dc;border-radius:6px;font-size:11px;background:#fff;color:#37474f;cursor:pointer}
+.port-row .x{cursor:pointer;color:#e53935;font-size:18px;line-height:1;width:24px;text-align:center}
+.line-preview{height:26px;border:1px solid #e3e8ee;border-radius:6px;background:#fafbfc;display:flex;align-items:center;padding:0 10px}
+.line-preview svg{width:100%;height:20px}
+.drawer-foot{padding:12px 18px;border-top:1px solid #e3e8ee;display:flex;gap:8px}
+.drawer-foot .btn{flex:1}
+.tip{background:#fff8e1;border:1px solid #ffe082;color:#8d6e00;font-size:11px;padding:9px 10px;border-radius:6px;line-height:1.5;margin-bottom:14px}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(90px);background:linear-gradient(120deg,#263238,#37474f);color:#fff;padding:11px 22px;border-radius:26px;font-size:12.5px;z-index:200;opacity:0;transition:transform .32s cubic-bezier(.22,.61,.36,1),opacity .3s;box-shadow:0 8px 24px rgba(0,0,0,.32);pointer-events:none;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+@media print{.topbar,.drawer,.rack-actions,.tb-bar{display:none!important}.canvas{padding:0}.rack-card,.textbox{break-inside:avoid;box-shadow:none}#exportArea{transform:none!important}#stage{width:auto!important;height:auto!important}}
+
+/* ============ 云端同步（集成到打卡系统后新增） ============ */
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;line-height:1.2}
+.save-state{font-size:11px;color:#90a4ae;white-space:nowrap;align-self:center;min-width:78px;text-align:right;font-weight:600}
+.save-state.dirty{color:#ef6c00}
+.save-state.saving{color:#1e88e5}
+.save-state.ok{color:#43a047}
+.save-state.err{color:#e53935;cursor:pointer;text-decoration:underline}
+.save-state.err:hover{color:#b71c1c}
+.whoami{font-size:11px;color:#607d8b;white-space:nowrap;align-self:center;max-width:96px;overflow:hidden;text-overflow:ellipsis}
+#topoSel{max-width:190px}
+/* 冲突/确认弹层 */
+.ts-modal{position:fixed;inset:0;z-index:300;background:rgba(21,32,43,.5);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .18s}
+.ts-modal.show{opacity:1;pointer-events:auto}
+.ts-modal-box{background:#fff;border-radius:14px;max-width:430px;width:100%;padding:22px 22px 16px;box-shadow:0 18px 52px rgba(0,0,0,.3);transform:translateY(10px);transition:transform .2s}
+.ts-modal.show .ts-modal-box{transform:translateY(0)}
+.ts-modal-box h4{font-size:15px;color:#1f3b5a;margin-bottom:8px}
+.ts-modal-box p{font-size:12.5px;color:#546e7a;line-height:1.65;margin-bottom:6px}
+.ts-modal-box .ts-acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.ts-modal-box .btn{min-width:88px}
+.ts-modal-box .btn.btn-danger{background:#c62828;color:#fff;border-color:#c62828;box-shadow:0 1px 3px rgba(198,40,40,.25)}
+.ts-modal-box .btn.btn-danger:hover{background:#ad1c1c}
+/* 多机房管理弹层 */
+.ts-modal-box.wide{max-width:560px}
+.ts-mgr-tip{font-size:12px;color:#78909c;background:#f4f8fb;border:1px solid #e3edf5;border-radius:7px;padding:9px 11px;margin:2px 0 12px;line-height:1.6}
+.ts-mgr-list{max-height:44vh;overflow:auto;border:1px solid #e3e9ef;border-radius:9px}
+.ts-mgr-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid #eef2f6}
+.ts-mgr-item:last-child{border-bottom:0}
+.ts-mgr-item.cur{background:#f0f7ff}
+.ts-mgr-meta{flex:1;min-width:0;cursor:pointer}
+.ts-mgr-name{font-size:13px;font-weight:600;color:#263238;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts-mgr-name .cur-tag{font-size:10px;font-weight:600;color:#1e88e5;background:#e3f2fd;border-radius:4px;padding:1px 5px;margin-left:6px}
+.ts-mgr-sub{font-size:11px;color:#90a4ae;margin-top:2px}
+.ts-mgr-ops{display:flex;gap:5px;flex-shrink:0}
+.ts-mgr-ops button{border:1px solid #d7e0e8;background:#fff;color:#546e7a;border-radius:6px;padding:5px 9px;font-size:11px;cursor:pointer;white-space:nowrap}
+.ts-mgr-ops button:hover{background:#f4f8fb;border-color:#90caf9;color:#1565c0}
+.ts-mgr-ops button.danger:hover{background:#ffebee;border-color:#ef9a9a;color:#c62828}
+.ts-mgr-ops button:disabled{opacity:.4;cursor:not-allowed}
+.ts-mgr-input{width:100%;border:1px solid #cfd8dc;border-radius:7px;padding:9px 11px;font-size:13px;color:#263238;box-sizing:border-box}
+.ts-mgr-input:focus{outline:none;border-color:#42a5f5;box-shadow:0 0 0 3px rgba(66,165,245,.15)}
+@media (max-width:820px){.save-state{min-width:0}#topoSel{max-width:110px}.whoami{display:none}.ts-mgr-item{flex-wrap:wrap}.ts-mgr-ops{width:100%;justify-content:flex-end}}
+</style>
+</head>
+<body class="theme-dark">
+
+<div class="topbar">
+  <!-- 品牌 -->
+  <div class="brand">
+    <div class="brand-mark">▤</div>
+    <div><h1>机柜连线拓扑</h1><span class="brand-sub">RACK TOPOLOGY EDITOR</span></div>
+  </div>
+
+  <!-- 云端：多机房拓扑切换与管理 -->
+  <div class="tb-group">
+    <span class="tb-glabel">机房</span>
+    <div class="tb-gbody">
+      <select id="topoSel" class="btn" title="切换机房拓扑（每份对应一个机房）">
+        <option value="">加载中…</option>
+      </select>
+      <button class="btn" id="topoMgr" title="新建 / 复制 / 重命名 / 删除机房拓扑">⚙ 管理</button>
+      <span id="saveState" class="save-state" title="云端保存状态">连接中…</span>
+    </div>
+  </div>
+
+  <!-- 历史 -->
+  <div class="tb-group">
+    <span class="tb-glabel">历史</span>
+    <div class="tb-gbody">
+      <button class="btn icon" id="undoBtn" title="撤销 (Ctrl+Z)" disabled>↶</button>
+      <button class="btn icon" id="redoBtn" title="重做 (Ctrl+Y / Ctrl+Shift+Z)" disabled>↷</button>
+    </div>
+  </div>
+
+  <!-- 机柜 -->
+  <div class="tb-group">
+    <span class="tb-glabel">机柜</span>
+    <div class="tb-gbody">
+      <div class="switch">机房 <input id="roomName" class="room-name" value="第一机房" title="点击修改机房名称"></div>
+      <div class="switch">编号 <input id="rackCode" class="room-name" style="width:78px" value="A-01" title="点击修改当前机柜编号"></div>
+      <select id="rackSelect" class="btn" title="切换机柜"></select>
+      <button class="btn primary" id="addRack">+ 机柜</button>
+      <button class="btn" id="copyRack">复制</button>
+      <button class="btn" id="sizeGlobalBtn" title="统一设置所有机柜的尺寸">尺寸</button>
+    </div>
+  </div>
+
+  <!-- 编辑 -->
+  <div class="tb-group">
+    <span class="tb-glabel">编辑</span>
+    <div class="tb-gbody">
+      <button class="btn primary" id="addDev">+ 设备</button>
+      <button class="btn" id="addText" title="在画布上添加可编辑的文本框">+ 文本框</button>
+    </div>
+  </div>
+
+  <!-- 连线 -->
+  <div class="tb-group">
+    <span class="tb-glabel">连线</span>
+    <div class="tb-gbody">
+      <button class="btn" id="linkMode" title="点任意端口即自动连线，再点另一端口完成；Esc 取消">连接端口</button>
+      <button class="btn" id="wireListBtn" title="查看/编辑所有连接">连接列表</button>
+    </div>
+  </div>
+
+  <!-- 视图 -->
+  <div class="tb-group">
+    <span class="tb-glabel">视图</span>
+    <div class="tb-gbody">
+      <select id="themeSel" class="btn" title="切换主题样式">
+        <option value="dark">深色可视化</option>
+        <option value="light">浅色刻度表</option>
+      </select>
+      <div class="zoombox">
+        <button class="btn" id="zoomOut" title="缩小">−</button>
+        <span id="zoomVal">100%</span>
+        <button class="btn" id="zoomIn" title="放大">+</button>
+        <button class="btn" id="zoomFit" title="适应窗口">适应</button>
+        <button class="btn" id="zoomReset" title="重置为100%">1:1</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文件 -->
+  <div class="tb-group">
+    <span class="tb-glabel">文件</span>
+    <div class="tb-gbody">
+      <select id="exportFmt" class="btn" title="选择导出格式">
+        <option value="png">图片</option>
+        <option value="xlsx">Excel</option>
+        <option value="pdf">PDF</option>
+      </select>
+      <button class="btn primary" id="exportBtn">导出</button>
+      <button class="btn" id="exportJson" title="导出为 JSON 文件">JSON导出</button>
+      <button class="btn" id="importJson" title="从 JSON 文件导入">JSON导入</button>
+      <button class="btn" id="printBtn">打印</button>
+      <button class="btn danger" id="resetBtn">重置</button>
+    </div>
+  </div>
+
+  <span class="hint">点端口连线 · 点空白取消 · Ctrl+滚轮缩放 · Ctrl+Z 撤销</span>
+
+  <!-- 系统导航（接入打卡系统后新增） -->
+  <div class="tb-group">
+    <span class="tb-glabel">系统</span>
+    <div class="tb-gbody">
+      <span id="whoami" class="whoami" title="当前登录账号">—</span>
+      <a class="btn" href="/" title="返回现场打卡">← 打卡</a>
+      <button class="btn" id="topoLogout" title="退出登录">退出</button>
+    </div>
+  </div>
+
+  <div class="alignbar">
+    <span class="lb">机柜对齐</span>
+    <button class="btn" id="selAll" title="全选/取消全选所有机柜">全选</button>
+    <span class="cnt" id="selCount">已选 1 个</span>
+    <div class="sep"></div>
+    <span class="glabel">横向</span>
+    <button class="btn" data-align="left" title="左边缘对齐到最左侧">水平对齐</button>
+    <button class="btn" data-align="hcenter" title="水平中心对齐到同一垂直线">水平居中</button>
+    <button class="btn" data-align="right" title="右边缘对齐到最右侧">右对齐</button>
+    <button class="btn" data-align="hdistribute" title="横向等间距分布（至少3个）">横向分布</button>
+    <div class="sep"></div>
+    <span class="glabel">纵向</span>
+    <button class="btn" data-align="top" title="顶端对齐到同一水平线">顶端对齐</button>
+    <button class="btn" data-align="vcenter" title="垂直中心对齐到同一水平线">垂直对齐</button>
+    <button class="btn" data-align="bottom" title="底端对齐到同一水平线">底端对齐</button>
+    <button class="btn" data-align="vdistribute" title="纵向等间距分布（至少3个）">纵向分布</button>
+    <span class="tipx">Ctrl / ⌘ + 点击机柜头部可多选，拖动已选机柜可整组移动</span>
+  </div>
+  <input type="file" id="fileInput" accept="application/json" hidden>
+</div>
+
+<div id="stage">
+<div id="exportArea">
+<div class="canvas" id="canvas">
+  <div class="room-title" id="roomTitle">第一机房</div>
+</div>
+</div>
+</div>
+
+<div class="drawer" id="drawer">
+  <h2 id="drawerTitle">编辑设备 <span class="x" id="closeDrawer">×</span></h2>
+  <div class="form">
+    <div class="tip">U位规则：U1 在机柜底部，数字越大越靠上。拖动设备条可快速调整位置。</div>
+    <div class="field"><label>设备名称</label><input id="f_name" placeholder="如：核心交换机"></div>
+    <div class="field"><label>型号</label><input id="f_model" placeholder="如：H3C S6520X"></div>
+    <div class="row2">
+      <div class="field"><label>设备类型</label>
+        <select id="f_type">
+          <option value="server">服务器</option>
+          <option value="network">网络设备</option>
+          <option value="storage">存储</option>
+          <option value="security">安全设备</option>
+          <option value="pdu">PDU/电源</option>
+          <option value="blank">空白挡板</option>
+          <option value="other">其他</option>
+        </select>
+      </div>
+      <div class="field"><label>高度(U)</label><input id="f_sizeU" type="number" min="1" max="42" value="2"></div>
+    </div>
+    <div class="field"><label>起始U位（底部所在U）</label><input id="f_startU" type="number" min="1" max="42" value="1"></div>
+    <div class="field"><label>颜色</label><div class="swatches" id="f_colors"></div></div>
+    <div class="field"><label>运行状态</label>
+      <div class="status-group" id="f_status">
+        <button data-v="normal">正常</button><button data-v="warning">告警</button><button data-v="error">故障</button><button data-v="offline">离线</button>
+      </div>
+    </div>
+    <div class="field"><label>备注</label><textarea id="f_note" rows="2" placeholder="IP、资产号等信息"></textarea></div>
+    <div class="field"><label>设备端口（用于设备间连线）</label>
+      <div id="f_ports" class="ports-edit"></div>
+      <button type="button" class="btn" id="addPort" style="width:100%;margin-top:6px">+ 添加端口</button>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn danger" id="delDev">删除</button>
+    <button class="btn" id="cancelEdit">取消</button>
+    <button class="btn primary" id="saveDev">保存</button>
+  </div>
+</div>
+
+<!-- 连接样式抽屉 -->
+<div class="drawer" id="wireDrawer">
+  <h2 id="wireDrawerTitle">连接设置 <span class="x" id="closeWire">×</span></h2>
+  <div class="form">
+    <div class="tip tip-wire" id="wirePath">连接路径</div>
+    <div class="field"><label>线条预览</label><div class="line-preview" id="wirePreview"></div></div>
+    <div class="field"><label>连接名称 / 用途</label><input id="w_name" placeholder="如：千兆上联、光纤互联"></div>
+    <div class="field"><label>颜色</label><div class="swatches" id="w_colors"></div></div>
+    <div class="row2">
+      <div class="field"><label>线宽</label><select id="w_width">
+        <option value="1">1 px 细</option><option value="2" selected>2 px 标准</option><option value="3">3 px 粗</option><option value="4">4 px 加粗</option>
+      </select></div>
+      <div class="field"><label>线型</label><select id="w_dash">
+        <option value="solid">实线</option><option value="dashed">虚线</option><option value="dotted">点线</option><option value="dashdot">点划线</option>
+      </select></div>
+    </div>
+    <div class="field"><label>箭头方向</label><select id="w_arrow">
+      <option value="none">无箭头</option><option value="end">终点箭头 →</option><option value="start">起点箭头 ←</option><option value="both">双向箭头 ↔</option>
+    </select></div>
+    <div class="field"><label>形状</label><select id="w_shape">
+      <option value="curve">平滑曲线</option><option value="ortho">直角折线</option><option value="straight">直线</option>
+    </select></div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn danger" id="delWire">删除</button>
+    <button class="btn" id="cancelWire">取消</button>
+    <button class="btn primary" id="saveWire">保存</button>
+  </div>
+</div>
+
+<!-- 连接列表抽屉 -->
+<div class="drawer" id="wireListDrawer">
+  <h2>连接列表 <span class="x" id="closeWireList">×</span></h2>
+  <div class="form" id="wireListBody"></div>
+  <div class="drawer-foot"><button class="btn primary" id="closeWireList2">关闭</button></div>
+</div>
+
+<!-- 机柜尺寸抽屉（统一 / 单个共用） -->
+<div class="drawer" id="sizeDrawer">
+  <h2 id="sizeDrawerTitle">机柜尺寸 <span class="x" id="closeSize">×</span></h2>
+  <div class="form">
+    <div class="tip" id="sizeTip">修改尺寸后，连线会自动重新对齐到端口。</div>
+    <div class="row2">
+      <div class="field"><label>机柜宽度（px）</label><input id="s_width" type="number" min="140" max="600" step="10"></div>
+      <div class="field"><label>每U高度（px）</label><input id="s_unitH" type="number" min="10" max="40" step="1"></div>
+    </div>
+    <div class="field"><label>U 数</label><input id="s_totalU" type="number" min="4" max="60" step="1"></div>
+    <div class="field" id="sizeScopeWrap" style="display:none">
+      <label>应用范围</label>
+      <div class="status-group" id="sizeScope">
+        <button data-v="global" class="sel">仅设为默认值</button>
+        <button data-v="all">覆盖全部机柜</button>
+      </div>
+      <div style="font-size:10px;color:#90a4ae;margin-top:6px;line-height:1.5">「仅设为默认值」只影响未单独设置的机柜；「覆盖全部」会清除所有机柜的单独尺寸，全部按此值统一。</div>
+    </div>
+    <div class="field" id="sizeSingleTip" style="display:none">
+      <div class="tip">此处仅修改当前机柜，其他机柜不受影响；带 ★ 标记的机柜表示使用了单独尺寸。</div>
+    </div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn danger" id="sizeReset" style="display:none">恢复默认</button>
+    <button class="btn" id="cancelSize">取消</button>
+    <button class="btn primary" id="saveSize">保存</button>
+  </div>
+</div>
+
+<!-- 文本框编辑抽屉 -->
+<div class="drawer" id="textDrawer">
+  <h2>编辑文本框 <span class="x" id="closeText">×</span></h2>
+  <div class="form">
+    <div class="field"><label>文字内容（支持换行）</label><textarea id="t_text" rows="4" placeholder="输入说明文字..."></textarea></div>
+    <div class="row2">
+      <div class="field"><label>字号（px）</label><input id="t_fontSize" type="number" min="10" max="72" step="1" value="14"></div>
+      <div class="field"><label>宽度（px）</label><input id="t_width" type="number" min="60" max="800" step="10" value="180"></div>
+    </div>
+    <div class="field"><label>对齐方式</label>
+      <div class="status-group" id="t_align">
+        <button data-v="left" class="sel">左对齐</button>
+        <button data-v="center">居中</button>
+        <button data-v="right">右对齐</button>
+      </div>
+    </div>
+    <div class="field"><label>文字颜色</label><div class="swatches" id="t_color"></div></div>
+    <div class="field"><label>背景颜色</label><div class="swatches" id="t_bg"></div></div>
+    <div class="field"><label>边框颜色 / 粗细</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="swatches" id="t_border" style="flex:1"></div>
+        <select id="t_borderW" style="width:74px;padding:6px 4px;border:1px solid #cfd8dc;border-radius:6px;font-size:11px">
+          <option value="0">无</option><option value="1" selected>细</option><option value="2">中</option><option value="3">粗</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>圆角（px）</label><input id="t_radius" type="number" min="0" max="30" step="1" value="8"></div>
+    <div class="field"><label>内边距（px）</label><input id="t_pad" type="number" min="0" max="40" step="1" value="8"></div>
+    <div class="field"><label>不透明度（0-100）</label><input id="t_opacity" type="number" min="10" max="100" step="5" value="100"></div>
+    <div class="field"><label>加粗</label><label style="display:flex;align-items:center;gap:7px;font-size:12px;color:#37474f;cursor:pointer"><input type="checkbox" id="t_bold" style="width:auto"> 文字加粗显示</label></div>
+    <div class="tip" style="margin-bottom:0">拖动文本框顶部蓝色条可自由移动位置；双击画布上的文本框可再次编辑。</div>
+  </div>
+  <div class="drawer-foot">
+    <button class="btn danger" id="textDelete">删除</button>
+    <button class="btn" id="cancelText">取消</button>
+    <button class="btn primary" id="saveText">保存</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY='rack_topology_v1';
+const COLORS=['#2196f3','#00bcd4','#4caf50','#8bc34a','#ff9800','#f44336','#9c27b0','#607d8b','#3f51b5','#009688'];
+const WIRE_COLORS=['#1565c0','#00acc1','#2e7d32','#ef6c00','#c62828','#6a1b9a','#37474f','#f9a825'];
+const DASH={solid:'none',dashed:'8 5',dotted:'2 4',dashdot:'10 4 2 4'};
+const STATUS={normal:{n:'正常',c:'#43a047'},warning:{n:'告警',c:'#fdd835'},error:{n:'故障',c:'#f44336'},offline:{n:'离线',c:'#9e9e9e'}};
+const TYPE_COLOR={server:'#2196f3',network:'#00bcd4',storage:'#4caf50',security:'#ff9800',pdu:'#9c27b0',blank:'#5c6a78',other:'#607d8b'};
+
+function defaultData(){
+  const dev=(id,name,model,type,startU,sizeU,status,note,ports)=>({id,name,model,type,startU,sizeU,status:status||'normal',note:note||'',color:TYPE_COLOR[type],ports:ports||[]});
+  const P=(id,name,side)=>({id:id,name:name,side:side||'right'});
+  return {
+    theme:'dark', focus:'A-01', roomName:'第一机房', roomPos:{x:24,y:16}, uOrder:'desc',
+    // 全局尺寸：未单独设置的机柜跟随此配置；totalU 同时作为新增机柜的默认U数
+    size:{width:250,unitH:17,totalU:42}, zoom:1,
+    // 画布文本框标注：可自由定位与自定义样式
+    textboxes:[{id:'tb1',text:'核心交换区 · 千兆/万兆上联',x:700,y:110,w:240,fontSize:14,color:'#e8eaf6',bg:'rgba(31,59,90,.92)',border:'#5c7cfa',borderW:2,radius:8,pad:10,opacity:100,align:'left',bold:false}],
+    racks:[
+      {id:'A-01',name:'A-01',totalU:42,pos:{x:24,y:64},devices:[
+        dev('d1','核心交换机 01','H3C S6520X','network',41,2,'normal','核心上联',[P('p1','GE1'),P('p2','GE2')]),
+        dev('d2','核心交换机 02','H3C S6520X','network',39,2,'normal','核心上联',[P('p3','GE1'),P('p4','10G-1')]),
+        dev('d3','应用服务器 01','Inspur NF5280 M6','server',35,2,'normal','',[P('p5','NIC-1')]),
+        dev('d4','应用服务器 02','Inspur NF5280 M6','server',32,2,'normal','',[P('p6','NIC-2')]),
+        dev('d5','存储阵列 01','OceanStor 5310','storage',27,3,'normal','',[P('p7','FC-1')]),
+        dev('d6','防火墙 01','USG6585E','security',21,2,'normal','边界防护',[P('p8','GE1','left')])
+      ]},
+      {id:'A-02',name:'A-02',totalU:42,pos:{x:400,y:64},devices:[
+        dev('d7','接入交换机 01','H3C S5130','network',41,2,'normal','',[P('p9','GE1'),P('p10','GE2')]),
+        dev('d8','接入交换机 02','H3C S5130','network',39,2,'normal','',[P('p11','GE1')]),
+        dev('d9','数据库服务器 01','Inspur NF5270 M5','server',34,2,'warning','',[P('p12','NIC-1')]),
+        dev('d10','数据库服务器 02','Inspur NF5270 M5','server',30,2,'normal','',[P('p13','NIC-2')]),
+        dev('d11','存储阵列 02','OceanStor 5310','storage',24,3,'normal','',[P('p14','FC-1','left')])
+      ]}
+    ],
+    wires:[
+      {id:'w1',from:{rack:'A-01',dev:'d1',port:'p1'},to:{rack:'A-02',dev:'d7',port:'p9'},name:'千兆上联 1',color:'#1565c0',width:2,dash:'solid',arrow:'both',shape:'ortho'},
+      {id:'w2',from:{rack:'A-01',dev:'d1',port:'p2'},to:{rack:'A-02',dev:'d7',port:'p10'},name:'千兆上联 2',color:'#1565c0',width:2,dash:'solid',arrow:'both',shape:'ortho'},
+      {id:'w3',from:{rack:'A-01',dev:'d2',port:'p4'},to:{rack:'A-02',dev:'d8',port:'p11'},name:'万兆光纤',color:'#ef6c00',width:3,dash:'dashed',arrow:'end',shape:'curve'},
+      {id:'w4',from:{rack:'A-01',dev:'d4',port:'p6'},to:{rack:'A-02',dev:'d9',port:'p12'},name:'数据库心跳',color:'#37474f',width:2,dash:'dotted',arrow:'none',shape:'curve'},
+      {id:'w5',from:{rack:'A-01',dev:'d3',port:'p5'},to:{rack:'A-01',dev:'d5',port:'p7'},name:'存储互联',color:'#2e7d32',width:2,dash:'solid',arrow:'end',shape:'curve'}
+    ]
+  };
+}
+function load(){try{const s=localStorage.getItem(KEY);if(s)return JSON.parse(s)}catch(e){}return defaultData()}
+let state=load();
+// 兼容旧数据：补齐可拖拽位置
+// 兼容旧数据：补齐可拖拽位置（从云端载入后同样需要跑一遍）
+function migrateState(){
+  if(!state.roomPos)state.roomPos={x:24,y:16};
+  if(!state.uOrder)state.uOrder='desc';
+  // 兼容旧存档：补齐全局尺寸配置（已有单柜尺寸不覆盖）
+  if(!state.size||typeof state.size!=='object')state.size={width:250,unitH:17,totalU:42};
+  if(!state.size.width)state.size.width=250;
+  if(!state.size.unitH)state.size.unitH=17;
+  if(!state.size.totalU)state.size.totalU=42;
+  if(!state.zoom)state.zoom=1;
+  state.racks.forEach((r,i)=>{
+    if(!r.pos)r.pos={x:24+i*306,y:64};
+    if(!r.totalU)r.totalU=state.size.totalU;
+    r.devices.forEach(d=>{if(!d.ports)d.ports=[];d.ports.forEach(p=>{if(!p.side)p.side='right'})});
+  });
+  if(!state.wires)state.wires=[];
+  if(!state.textboxes)state.textboxes=[];
+}
+migrateState();
+let edit={rackId:null,devId:null,draftColor:TYPE_COLOR.server,draftStatus:'normal',draftPorts:[]};
+let wireEdit={id:null,color:'#1565c0'};
+// 多选机柜（仅当前会话有效，不写入存档）
+let rackSel=new Set();
+function selectedRacks(){return state.racks.filter(r=>rackSel.has(r.id))}
+
+// ===== 撤销 / 重做历史栈 =====
+let _history=[],_hIdx=-1;
+function snapshot(){return JSON.stringify(state)}
+function persist(){
+  const s=snapshot();
+  localStorage.setItem(KEY,s);   // 本地始终留一份：断网、误刷新都不丢
+  if(typeof TS!=='undefined')TS.markDirty(s);   // 触发云端防抖保存
+}
+function pushHistory(){
+  const s=snapshot();
+  if(_history[_hIdx]===s)return;               // 内容无变化不入栈
+  _history=_history.slice(0,_hIdx+1);
+  _history.push(s);
+  if(_history.length>80){_history.shift()}
+  _hIdx=_history.length-1;
+  updateHistBtns();
+}
+function save(){persist();pushHistory()}
+function applySnapshot(s){
+  try{state=JSON.parse(s)}catch(e){return}
+  rackSel.clear();if(state.focus)rackSel.add(state.focus);
+  selWire=null;linkMode=false;pendingPort=null;
+  document.body.style.cursor='';
+  document.querySelectorAll('.drawer.open').forEach(d=>d.classList.remove('open'));
+  persist();render();updateHistBtns();
+}
+function undo(){if(_hIdx<=0){toast('没有可撤销的操作');return}_hIdx--;applySnapshot(_history[_hIdx]);toast('已撤销')}
+function redo(){if(_hIdx>=_history.length-1){toast('没有可重做的操作');return}_hIdx++;applySnapshot(_history[_hIdx]);toast('已重做')}
+function updateHistBtns(){
+  const u=document.getElementById('undoBtn'),r=document.getElementById('redoBtn');
+  if(u)u.disabled=_hIdx<=0;
+  if(r)r.disabled=_hIdx>=_history.length-1;
+}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),1800)}
+function uid(){return 'd'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+// rAF 合帧：高频拖拽事件每帧最多执行一次重绘，避免布局抖动与掉帧
+function rafThrottle(fn){
+  let raf=0,lastArgs=null;
+  const run=()=>{raf=0;fn.apply(null,lastArgs)};
+  const w=(...a)=>{lastArgs=a;if(!raf)raf=requestAnimationFrame(run)};
+  w.flush=(...a)=>{if(raf){cancelAnimationFrame(raf);raf=0}if(a.length)fn.apply(null,a);else if(lastArgs)fn.apply(null,lastArgs)};
+  w.cancel=()=>{if(raf){cancelAnimationFrame(raf);raf=0}};
+  return w;
+}
+function currentRack(){return state.racks.find(r=>r.id===state.focus)||state.racks[0]}
+// 尺寸取值：机柜级自定义优先，否则用全局默认；深浅主题共用同一套尺寸保证一致
+function rackW(r){return (r&&r.w)||state.size.width}
+function unitH(r){return (r&&r.unitH)||state.size.unitH}
+
+// ===== 画布整体缩放 =====
+// 用 CSS transform 缩放 #exportArea，逻辑坐标保持不变；
+// 所有基于 getBoundingClientRect 的屏幕像素（连线、拖拽、双击定位）都需除以 zoom 换算回逻辑坐标。
+function zoom(){return clamp(state.zoom||1,0.4,2.5)}
+function setZoom(z){
+  state.zoom=clamp(Math.round(z*100)/100,0.4,2.5);
+  const ea=document.getElementById('exportArea');
+  if(ea)ea.style.transform='scale('+state.zoom+')';
+  const lbl=document.getElementById('zoomVal');
+  if(lbl)lbl.textContent=Math.round(state.zoom*100)+'%';
+  syncStageSize();renderWires();save();
+}
+function fitZoom(){
+  // 让全部内容缩放后正好落在可视区域内
+  const canvas=document.getElementById('canvas');
+  const pad=48;
+  const availW=document.documentElement.clientWidth-pad;
+  const availH=window.innerHeight-190;
+  const contentW=canvas.offsetWidth, contentH=canvas.offsetHeight;
+  if(!contentW||!contentH)return;
+  setZoom(Math.min(availW/contentW,availH/contentH,1.5));
+}
+
+// ===== U 位顺序换算（desc: 42在上1在下；asc: 1在上42在上） =====
+// U位固定按物理位置：U1在底部、数字越大越靠上（右侧降序标尺）；左侧另加升序槽位标尺
+function isAsc(){return false}
+function uTop(rack,u){const uh=unitH(rack);return isAsc()?(u-1)*uh:(rack.totalU-u)*uh}
+function uSeq(rack){const a=[];if(isAsc()){for(let u=1;u<=rack.totalU;u++)a.push(u)}else{for(let u=rack.totalU;u>=1;u--)a.push(u)}return a}
+function devTop(rack,d){return Math.min(uTop(rack,d.startU),uTop(rack,d.startU+d.sizeU-1))}
+function uCenter(rack,lo,hi){return Math.min(uTop(rack,lo),uTop(rack,hi))+(hi-lo+1)*unitH(rack)/2}
+function uFromY(rack,y){const row=Math.floor(y/unitH(rack));return isAsc()?clamp(row+1,1,rack.totalU):clamp(rack.totalU-row,1,rack.totalU)}
+function uAfterDrag(origU,rows){return isAsc()?origU+rows:origU-rows}
+
+// 全量消除重叠（改U数后用）
+function resolveAllOverlaps(rack){
+  let guard=0;
+  while(guard++<80){
+    let pair=null;
+    for(let i=0;i<rack.devices.length&&!pair;i++)
+      for(let j=i+1;j<rack.devices.length;j++){
+        const a=rack.devices[i],b=rack.devices[j];
+        if(a.startU<b.startU+b.sizeU&&b.startU<a.startU+a.sizeU){pair=[a,b];break}
+      }
+    if(!pair)break;
+    const mv=pair[1],free=[];
+    for(let s=1;s<=rack.totalU-mv.sizeU+1;s++)
+      if(rack.devices.every(o=>o===mv||!(s<o.startU+o.sizeU&&o.startU<s+mv.sizeU)))free.push(s);
+    if(!free.length)break;
+    free.sort((a,b)=>Math.abs(a-mv.startU)-Math.abs(b-mv.startU));
+    mv.startU=free[0];
+  }
+}
+
+// 重叠避让：固定 fixedId（当前操作设备），把与它重叠的其他设备移到最近空闲U位（优先下移，其次上移）
+function resolveOverlaps(rack,fixedId){
+  const total=rack.totalU;
+  const fixed=rack.devices.find(d=>d.id===fixedId);
+  if(!fixed)return [];
+  const moved=[];
+  const overlap=(a,b)=>a.startU<b.startU+b.sizeU&&b.startU<a.startU+a.sizeU;
+  let guard=0;
+  while(guard++<60){
+    const conflicts=rack.devices.filter(d=>d.id!==fixedId&&overlap(d,fixed));
+    if(!conflicts.length)break;
+    // 与固定设备重叠的设备中，取离固定设备最近的先处理
+    conflicts.sort((a,b)=>{
+      const dist=d=>Math.min(Math.abs(d.startU-(fixed.startU+fixed.sizeU)),Math.abs((d.startU+d.sizeU)-fixed.startU));
+      return dist(a)-dist(b);
+    });
+    let any=false;
+    for(const d of conflicts){
+      const free=[];
+      for(let s=1;s<=total-d.sizeU+1;s++){
+        if(rack.devices.every(o=>o.id===d.id||!overlap({startU:s,sizeU:d.sizeU},o)))free.push(s);
+      }
+      // 选离当前位置最近的空位；同距离时优先向上（U增大）
+      free.sort((a,b)=>(Math.abs(a-d.startU)-Math.abs(b-d.startU))||(b-a));
+      if(free.length){
+        const old=d.startU;d.startU=free[0];moved.push({name:d.name,from:old,to:free[0]});any=true;
+      }
+    }
+    if(!any)break; // 无可用空位
+  }
+  return moved;
+}
+
+function idleRanges(devices,totalU){
+  const occ=new Set();
+  devices.forEach(d=>{for(let u=d.startU;u<d.startU+d.sizeU;u++)occ.add(u)});
+  const out=[];let s=null;
+  for(let u=1;u<=totalU;u++){
+    if(!occ.has(u)){if(s===null)s=u}
+    else{if(s!==null){out.push([s,u-1]);s=null}}
+  }
+  if(s!==null)out.push([s,totalU]);
+  return out.filter(r=>r[1]-r[0]+1>=3);
+}
+function portsHTML(type){
+  if(type==='server'||type==='storage')return '<div class="ports"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>';
+  if(type==='network')return '<div class="ports net">'+'<i></i>'.repeat(12)+'</div>';
+  return '';
+}
+function ledsHTML(status){
+  // 仅一个状态灯：正常绿/告警黄/故障红/离线灰；显示在设备名称前面
+  const st=(STATUS[status]||STATUS.normal);
+  const c=st.c;
+  return '<span class="leds" title="状态：'+st.n+'"><i style="background:'+c+';color:'+c+'"></i></span>';
+}
+
+function render(){
+  document.body.className='theme-'+state.theme;
+  const ea=document.getElementById('exportArea');
+  if(ea)ea.style.transform='scale('+zoom()+')';
+  const zl=document.getElementById('zoomVal');
+  if(zl)zl.textContent=Math.round(zoom()*100)+'%';
+  document.getElementById('themeSel').value=state.theme;
+  document.getElementById('roomName').value=state.roomName||'第一机房';
+  document.getElementById('roomTitle').textContent=state.roomName||'第一机房';
+  document.getElementById('roomTitle').style.left=state.roomPos.x+'px';
+  document.getElementById('roomTitle').style.top=state.roomPos.y+'px';
+  document.getElementById('rackCode').value=currentRack().name;
+  renderRackSelect();
+  const canvas=document.getElementById('canvas');
+  canvas.innerHTML=state.racks.map(rackHTML).join('')
+    +(state.textboxes||[]).map(textboxHTML).join('')
+    +canvas.querySelector('#roomTitle').outerHTML;
+  bindCanvas();
+  fitCanvas();
+  updateAlignBar();
+  renderWires();
+}
+
+// 对齐工具条状态
+function updateAlignBar(){
+  const n=rackSel.size;
+  document.getElementById('selCount').textContent='已选 '+n+' 个';
+  document.getElementById('selAll').textContent=(n>0&&n===state.racks.length)?'取消全选':'全选';
+  document.querySelectorAll('.alignbar button[data-align]').forEach(b=>{
+    b.disabled=n<2||((b.dataset.align==='hdistribute'||b.dataset.align==='vdistribute')&&n<3);
+  });
+}
+
+// 对齐/分布：left=水平(左)对齐, top=顶端对齐, bottom=底端对齐, hdistribute=横向分布
+function alignRacks(mode){
+  const rs=selectedRacks();
+  if(rs.length<2){toast('请先选中至少 2 个机柜（Ctrl+点击）');return}
+  if((mode==='hdistribute'||mode==='vdistribute')&&rs.length<3){toast('分布至少需选中 3 个机柜');return}
+  const canvas=document.getElementById('canvas');
+  const sizeOf=r=>{const el=canvas.querySelector('.rack-card[data-rack="'+r.id+'"]');return {w:el?el.offsetWidth:rackW(r),h:el?el.offsetHeight:r.totalU*unitH(r)+91}};
+  if(mode==='left'){
+    const x=Math.min(...rs.map(r=>r.pos.x));rs.forEach(r=>r.pos.x=Math.max(0,x));
+  }else if(mode==='hcenter'){
+    const cx=rs.reduce((s,r)=>s+r.pos.x+sizeOf(r).w/2,0)/rs.length;
+    rs.forEach(r=>r.pos.x=Math.max(0,Math.round(cx-sizeOf(r).w/2)));
+  }else if(mode==='right'){
+    const x=Math.max(...rs.map(r=>r.pos.x+sizeOf(r).w));rs.forEach(r=>r.pos.x=Math.max(0,x-sizeOf(r).w));
+  }else if(mode==='top'){
+    const y=Math.min(...rs.map(r=>r.pos.y));rs.forEach(r=>r.pos.y=Math.max(0,y));
+  }else if(mode==='vcenter'){
+    const cy=rs.reduce((s,r)=>s+r.pos.y+sizeOf(r).h/2,0)/rs.length;
+    rs.forEach(r=>r.pos.y=Math.max(0,Math.round(cy-sizeOf(r).h/2)));
+  }else if(mode==='bottom'){
+    const b=Math.max(...rs.map(r=>r.pos.y+sizeOf(r).h));
+    rs.forEach(r=>r.pos.y=Math.max(0,Math.round(b-sizeOf(r).h)));
+  }else if(mode==='hdistribute'){
+    rs.sort((a,b)=>a.pos.x-b.pos.x);
+    const first=rs[0].pos.x,last=rs[rs.length-1].pos.x,step=(last-first)/(rs.length-1);
+    rs.forEach((r,i)=>r.pos.x=Math.max(0,Math.round(first+i*step)));
+  }else if(mode==='vdistribute'){
+    rs.sort((a,b)=>a.pos.y-b.pos.y);
+    const first=rs[0].pos.y,last=rs[rs.length-1].pos.y,step=(last-first)/(rs.length-1);
+    rs.forEach((r,i)=>r.pos.y=Math.max(0,Math.round(first+i*step)));
+  }
+  save();render();
+  const label={left:'水平对齐',hcenter:'水平居中',right:'右对齐',hdistribute:'横向分布',top:'顶端对齐',vcenter:'垂直对齐',bottom:'底端对齐',vdistribute:'纵向分布'}[mode];
+  toast('已'+label+' '+rs.length+' 个机柜');
+}
+
+// 画布自适应尺寸，容纳所有机柜；逻辑内容尺寸固定后由 stage 按 zoom 撑开滚动区
+function fitCanvas(){
+  const canvas=document.getElementById('canvas');
+  let maxRight=0,maxBottom=0;
+  state.racks.forEach(r=>{
+    const el=canvas.querySelector('.rack-card[data-rack="'+r.id+'"]');
+    if(el){
+      maxRight=Math.max(maxRight,r.pos.x+el.offsetWidth);
+      maxBottom=Math.max(maxBottom,r.pos.y+el.offsetHeight);
+    }
+  });
+  (state.textboxes||[]).forEach(tb=>{
+    const el=canvas.querySelector('.textbox[data-tb="'+tb.id+'"]');
+    if(el){
+      maxRight=Math.max(maxRight,tb.x+el.offsetWidth);
+      maxBottom=Math.max(maxBottom,tb.y+el.offsetHeight);
+    }
+  });
+  // 跨柜外绕线：右侧通道与前场机柜留出余量，底部通道预留 26+o*12
+  const crossN=(state.wires||[]).filter(w=>w.from.rack!==w.to.rack).length;
+  const botLanes=crossN>1?Math.floor((crossN-1)/2):0;
+  // 用户拖拽多段控制点后的正向偏移也要预留，避免导出被裁（负向已被 MINGAP clamp）
+  let extX=0,extY=0;
+  (state.wires||[]).forEach(w=>{
+    extX=Math.max(extX,w.dxa||0,w.dxb||0);
+    extY=Math.max(extY,w.dy||0);
+  });
+  const W=Math.max(document.documentElement.clientWidth-40,maxRight+60+crossN*12+extX);
+  const H=Math.max(560,maxBottom+40+botLanes*12+30+extY);
+  canvas.style.width=W+'px';
+  canvas.style.minHeight=H+'px';
+  syncStageSize();
+}
+// stage 用逻辑内容尺寸 × zoom 撑开，保证放大后仍可滚动到右下角
+function syncStageSize(){
+  const canvas=document.getElementById('canvas'),stage=document.getElementById('stage');
+  if(!canvas||!stage)return;
+  const z=zoom();
+  stage.style.width=(canvas.offsetWidth*z)+'px';
+  stage.style.height=(canvas.offsetHeight*z)+'px';
+}
+
+function renderRackSelect(){
+  const sel=document.getElementById('rackSelect');
+  sel.innerHTML=state.racks.map(r=>'<option value="'+r.id+'"'+(r.id===state.focus?' selected':'')+'>'+esc(r.name)+'</option>').join('');
+}
+function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+function rackHTML(rack){
+  const uh=unitH(rack),H=rack.totalU*uh;
+  const isLight=state.theme==='light';
+  let inner='';
+  if(!isLight){
+    idleRanges(rack.devices,rack.totalU).forEach(r=>{
+      const top=uCenter(rack,r[0],r[1]);
+      inner+='<div class="idle" style="top:'+top+'px;left:50%">'+r[0]+'-'+r[1]+'U 空闲</div>';
+    });
+  }else{
+    let cells='';
+    uSeq(rack).forEach(u=>{cells+='<div class="u-row" style="height:'+uh+'px" data-u="'+u+'"><span class="plus">+</span></div>'});
+    inner+='<div class="u-cells" style="height:'+H+'px">'+cells+'</div>';
+  }
+  rack.devices.forEach(d=>{
+    const top=devTop(rack,d), h=d.sizeU*uh;
+    const blank=d.type==='blank'?' blank-dev':'';
+    // 左侧端口会占据设备左缘一段宽度，设备名/型号据此右移避让
+    const leftPorts=(d.ports||[]).filter(p=>p.side==='left');
+    const maxLeftName=leftPorts.reduce((m,p)=>Math.max(m,(p.name||'').length),0);
+    const shift=leftPorts.length?Math.max(34,maxLeftName*6+20):0;
+    // 状态灯显示在设备名称前面；不再需要为右侧端口左移避让
+    inner+='<div class="device'+blank+'" data-rack="'+rack.id+'" data-dev="'+d.id+'" style="top:'+top+'px;height:'+h+'px">'
+      +'<div class="dev-stripe" style="background:'+d.color+'"></div>'
+      +'<div class="dev-main"'+(shift?' style="padding-left:'+shift+'px"':'')+'><div class="dev-title">'+ledsHTML(d.status)+'<div class="dev-name">'+esc(d.name)+'</div></div><div class="dev-model">'+esc(d.model)+'</div></div>'
+      +'<div class="dev-right">'+portsHTML(d.type)+'</div></div>';
+    // 端口锚点：按各自 side 显示在设备左/右侧，同侧端口各自垂直居中排布
+    const ph=12, gap=1;
+    const portTop=(list,p)=>{
+      const side=p.side==='left'?'left':'right';
+      const group=list.filter(x=>(x.side==='left'?'left':'right')===side);
+      const gi=group.indexOf(p), total=group.length*ph+(group.length-1)*gap;
+      return top+(h-total)/2+gi*(ph+gap);
+    };
+    (d.ports||[]).forEach(p=>{
+      const side=p.side==='left'?'left':'right';
+      const pt=portTop(d.ports,p);
+      inner+='<div class="port side-'+side+'" data-rack="'+rack.id+'" data-dev="'+d.id+'" data-port="'+p.id+'" style="top:'+pt+'px" title="'+esc(p.name)+'（'+(side==='left'?'左':'右')+'侧）">'+esc(p.name)+'</div>';
+    });
+  });
+  // 双标尺：左侧升序(槽位1→N)、右侧降序(物理U N→1)，同一行 data-u 相同
+  let rulerL='',rulerR='';
+  for(let i=0;i<rack.totalU;i++){
+    const phys=rack.totalU-i;              // 该行对应的物理U位
+    rulerL+='<span data-u="'+phys+'">'+(i+1)+'</span>';  // 左：1,2,...N
+    rulerR+='<span data-u="'+phys+'">'+phys+'</span>';   // 右：N,...,2,1
+  }
+  inner+='<div class="u-ruler u-ruler-l" style="height:'+H+'px">'+rulerL+'</div>'
+    +'<div class="u-ruler" style="height:'+H+'px">'+rulerR+'</div>';
+  const actions='<div class="rack-actions"><button class="btn" data-act="copy" data-rack="'+rack.id+'">复制机柜</button>'
+    +'<button class="btn" data-act="setsize" data-rack="'+rack.id+'" title="单独设置此机柜的宽高/U数">尺寸</button>'
+    +'<button class="btn" data-act="setu" data-rack="'+rack.id+'">'+rack.totalU+'U</button>'
+    +'<button class="btn" data-act="editname" data-rack="'+rack.id+'">重命名</button>'
+    +'<button class="btn del" data-act="del" data-rack="'+rack.id+'">删除机柜</button></div>';
+  const cust=(rack.w||rack.unitH)?'<span title="使用了单独尺寸" style="color:#ffb300"> ★</span>':'';
+  return '<div class="rack-card'+(rack.id===state.focus?' focus':'')+(rackSel.has(rack.id)?' sel':'')+'" data-rack="'+rack.id+'" style="left:'+rack.pos.x+'px;top:'+rack.pos.y+'px;width:'+rackW(rack)+'px">'
+    +'<div class="rack-head" data-focus="'+rack.id+'"><span class="rname">'+esc(rack.name)+'</span>'
+    +'<span class="rmeta"><span class="dot"></span>'+rack.totalU+'U · '+rack.devices.filter(d=>d.type!=='blank').length+'台设备'+cust+'</span></div>'
+    +'<div class="rack-body" style="height:'+H+'px">'+inner+'</div>'+actions+'</div>';
+}
+
+// ============ 文本框标注 ============
+function textboxHTML(tb){
+  const style='left:'+tb.x+'px;top:'+tb.y+'px;width:'+(tb.w||180)+'px;'
+    +'opacity:'+((tb.opacity==null?100:tb.opacity)/100)+';';
+  const ts='font-size:'+(tb.fontSize||14)+'px;'
+    +'color:'+(tb.color||'#e8eaf6')+';'
+    +'background:'+(tb.bg||'transparent')+';'
+    +'border:'+(tb.borderW||0)+'px solid '+(tb.border||'transparent')+';'
+    +'border-radius:'+(tb.radius==null?8:tb.radius)+'px;'
+    +'padding:'+(tb.pad==null?8:tb.pad)+'px;'
+    +'text-align:'+(tb.align||'left')+';'
+    +'font-weight:'+(tb.bold?'700':'400')+';';
+  return '<div class="textbox" data-tb="'+tb.id+'" style="'+style+'">'
+    +'<div class="tb-bar" data-tb="'+tb.id+'"><span class="tb-grip">⠿</span><span class="tb-name">文本框</span>'
+    +'<span class="tb-act" data-tbact="edit" data-tb="'+tb.id+'" title="编辑">✎</span>'
+    +'<span class="tb-act" data-tbact="del" data-tb="'+tb.id+'" title="删除">×</span></div>'
+    +'<div class="tb-text" style="'+ts+'">'+esc(tb.text||'')+'</div></div>';
+}
+
+// ============ 连线（SVG） ============
+let linkMode=false, pendingPort=null;   // 连接模式状态
+let selWire=null;                        // 当前选中的连线 id（仅选中的连线显示可拖动白点）
+const WIRE_DEF={color:'#1565c0',width:2,dash:'solid',arrow:'end',shape:'ortho',name:''};
+
+// 几何快照：一次 renderWires 内只做一次强制布局读取，后续所有坐标换算走缓存，避免每条线反复 getBoundingClientRect 造成回流抖动
+let _geo=null;
+function buildGeo(){
+  const canvas=document.getElementById('canvas');
+  const c=canvas.getBoundingClientRect(), z=zoom();
+  const ports={},cards={},rackMids={};
+  canvas.querySelectorAll('.port').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    ports[el.dataset.rack+'|'+el.dataset.dev+'|'+el.dataset.port]={x:(r.left+r.width/2-c.left)/z,y:(r.top+r.height/2-c.top)/z};
+  });
+  canvas.querySelectorAll('.rack-card').forEach(el=>{
+    const r=el.getBoundingClientRect();
+    cards[el.dataset.rack]={left:(r.left-c.left)/z,right:(r.right-c.left)/z,top:(r.top-c.top)/z,bottom:(r.bottom-c.top)/z,midX:((r.left+r.right)/2-c.left)/z,midY:((r.top+r.bottom)/2-c.top)/z};
+  });
+  _geo={ports,cards,canvasW:canvas.scrollWidth,canvasH:canvas.scrollHeight};
+  return _geo;
+}
+function portCenter(rackId,devId,portId){
+  if(_geo)return _geo.ports[rackId+'|'+devId+'|'+portId]||null;
+  const el=document.querySelector('.port[data-rack="'+rackId+'"][data-dev="'+devId+'"][data-port="'+portId+'"]');
+  const canvas=document.getElementById('canvas');
+  if(!el||!canvas)return null;
+  const a=el.getBoundingClientRect(), c=canvas.getBoundingClientRect();
+  const z=zoom();
+  return {x:(a.left+a.width/2-c.left)/z, y:(a.top+a.height/2-c.top)/z};
+}
+function wirePath(a,b,shape){
+  if(shape==='straight')return 'M'+a.x+' '+a.y+' L'+b.x+' '+b.y;
+  if(shape==='ortho'){
+    const mx=(a.x+b.x)/2;
+    return 'M'+a.x+' '+a.y+' L'+mx+' '+a.y+' L'+mx+' '+b.y+' L'+b.x+' '+b.y;
+  }
+  if(Math.abs(b.x-a.x)<Math.abs(b.y-a.y)*0.5){
+    // 同机柜/近垂直：上下方向控制点
+    const dy=(b.y-a.y)*0.45;
+    return 'M'+a.x+' '+a.y+' C'+a.x+' '+(a.y+dy)+','+b.x+' '+(b.y-dy)+','+b.x+' '+b.y;
+  }
+  const dx=Math.max(40,Math.abs(b.x-a.x)*0.45);
+  return 'M'+a.x+' '+a.y+' C'+(a.x+dx)+' '+a.y+','+(b.x-dx)+' '+b.y+','+b.x+' '+b.y;
+}
+// 圆角折线：pts 为途经点数组，r 为圆角半径
+function roundedPath(pts,r){
+  r=r||12;
+  let d='M'+pts[0].x+' '+pts[0].y;
+  for(let i=1;i<pts.length-1;i++){
+    const p=pts[i-1],c=pts[i],n=pts[i+1];
+    const v1x=p.x-c.x,v1y=p.y-c.y,v2x=n.x-c.x,v2y=n.y-c.y;
+    const l1=Math.hypot(v1x,v1y)||1,l2=Math.hypot(v2x,v2y)||1;
+    const r1=Math.min(r,l1/2,l2/2),r2=r1;
+    d+=' L'+(c.x+v1x/l1*r1)+' '+(c.y+v1y/l1*r1);
+    d+=' Q'+c.x+' '+c.y+' '+(c.x+v2x/l2*r2)+' '+(c.y+v2y/l2*r2);
+  }
+  const last=pts[pts.length-1];
+  return d+' L'+last.x+' '+last.y;
+}
+// 同机柜连线：从机柜外侧绕行，避免穿过设备
+// lanes: {right:[偏移索引列表], left:[...]} 由调用方按同机柜连线顺序错开通道，避免多条线重叠
+function intraRackPath(a,b,rackId,lane){
+  const R=_geo&&_geo.cards[rackId];
+  if(!R){lane.handles=[{x:(a.x+b.x)/2,y:(a.y+b.y)/2,axis:'h',key:'dy'}];return wirePath(a,b,'ortho')}
+  const OUT=20, STEP=12, MINGAP=8;               // 机柜外走线通道距边缘、多线间距、画布最小留边
+  const dxa=lane.dxa||0, dxb=lane.dxb||0, dy=lane.dy||0; // 起点段/终点段 X 偏移、绕行段 Y 偏移
+  const aRight=a.x>=(R.left+R.right)/2, bRight=b.x>=(R.left+R.right)/2;
+  const leftX=(n,dx)=>Math.max(MINGAP,R.left-OUT-n*STEP+dx);
+  const rightX=(n,dx)=>R.right+OUT+n*STEP+dx;
+  const ax=aRight?rightX(lane.r||0,dxa):leftX(lane.l||0,dxa);
+  const bx=bRight?rightX(lane.r||0,dxb):leftX(lane.l||0,dxb);
+  if(aRight===bRight){
+    // 同侧：引出 → 外侧垂直 → 引回；起点段控制点拖动改 X
+    lane.handles=[{x:ax,y:(Math.min(a.y,b.y)+Math.max(a.y,b.y))/2,axis:'v',key:'dxa'}];
+    return roundedPath([{x:a.x,y:a.y},{x:ax,y:a.y},{x:ax,y:b.y},{x:b.x,y:b.y}]);
+  }
+  // 异侧：起点段/绕行段/终点段三个控制点各自可调
+  const base=(Math.min(a.y,b.y)-R.top)<=(R.bottom-Math.max(a.y,b.y))?R.top-OUT-(lane.t||0)*STEP:R.bottom+OUT+(lane.t||0)*STEP;
+  const yOut=Math.max(MINGAP,base+dy);
+  lane.handles=[
+    {x:ax,y:(a.y+yOut)/2,axis:'v',key:'dxa'},
+    {x:(ax+bx)/2,y:yOut,axis:'h',key:'dy'},
+    {x:bx,y:(yOut+b.y)/2,axis:'v',key:'dxb'}
+  ];
+  return roundedPath([{x:a.x,y:a.y},{x:ax,y:a.y},{x:ax,y:yOut},{x:bx,y:yOut},{x:bx,y:b.y},{x:b.x,y:b.y}]);
+}
+// 跨机柜连线：以机柜中点 U 为界，上半端口从顶部走线、下半端口从底部走线
+// 两端均在上半→顶部；均下半→底部；一上一下→按起点端口判定。面对面端口走两柜间空隙。
+function crossRackPath(a,b,rackA,rackB,lane){
+  const R1=_geo&&_geo.cards[rackA],R2=_geo&&_geo.cards[rackB];
+  if(!R1||!R2){lane.handles=[{x:(a.x+b.x)/2,y:(a.y+b.y)/2,axis:'h',key:'dy'}];return wirePath(a,b,'ortho')}
+  const OUT=26,STEP=12,MINGAP=8,o=lane.o||0;
+  const dxa=lane.dxa||0, dxb=lane.dxb||0, dy=lane.dy||0; // 起点段/终点段 X 偏移、绕行段 Y 偏移
+  const aR=a.x>=(R1.left+R1.right)/2, bR=b.x>=(R2.left+R2.right)/2;
+  const ax=(aR?R1.right+OUT+o*STEP:Math.max(MINGAP,R1.left-OUT-o*STEP))+dxa;
+  const bx=(bR?R2.right+OUT+o*STEP:Math.max(MINGAP,R2.left-OUT-o*STEP))+dxb;
+  const aLeftOfB=R1.right<=R2.left, bLeftOfA=R2.right<=R1.left;
+  const faceToFace=(aLeftOfB&&aR&&!bR)||(bLeftOfA&&!aR&&bR);
+  // 三段控制点：起点垂直段(改X)、绕行水平段(改Y)、终点垂直段(改X)
+  const makeHandles=yCross=>[
+    {x:ax,y:(a.y+yCross)/2,axis:'v',key:'dxa'},
+    {x:(ax+bx)/2,y:yCross,axis:'h',key:'dy'},
+    {x:bx,y:(yCross+b.y)/2,axis:'v',key:'dxb'}
+  ];
+  if(faceToFace){
+    const my=Math.max(MINGAP,(a.y+b.y)/2+dy);
+    lane.handles=makeHandles(my);
+    return roundedPath([{x:a.x,y:a.y},{x:ax,y:a.y},{x:ax,y:my},{x:bx,y:my},{x:bx,y:b.y},{x:b.x,y:b.y}]);
+  }
+  // 按端口相对各自机柜垂直中点的位置判定走线方向
+  const midA=(R1.top+R1.bottom)/2, midB=(R2.top+R2.bottom)/2;
+  const upperA=a.y<midA, upperB=b.y<midB;
+  const side=(upperA&&upperB)?'top':(!upperA&&!upperB)?'bottom':(upperA?'top':'bottom');
+  lane.side=side;
+  const base=side==='bottom'?Math.max(R1.bottom,R2.bottom)+OUT+o*STEP
+    :Math.max(MINGAP,Math.min(R1.top,R2.top)-OUT-o*STEP);
+  const yCross=Math.max(MINGAP,base+dy);
+  lane.handles=makeHandles(yCross);
+  return roundedPath([{x:a.x,y:a.y},{x:ax,y:a.y},{x:ax,y:yCross},{x:bx,y:yCross},{x:bx,y:b.y},{x:b.x,y:b.y}]);
+}
+function renderWires(){
+  const canvas=document.getElementById('canvas');
+  const geo=buildGeo();                       // 一次性读取全部端口/机柜几何，供本次渲染全程复用
+  let svg=document.getElementById('wireLayer');
+  if(!svg){
+    svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.id='wireLayer';svg.setAttribute('class','wire-layer');canvas.appendChild(svg);
+  }
+  svg.style.width=geo.canvasW+'px';svg.style.height=geo.canvasH+'px';
+  svg.setAttribute('viewBox','0 0 '+geo.canvasW+' '+geo.canvasH);
+  const defs=[],paths=[],handles=[];
+  // 用户拖拽偏移：dxa/dx b 为起点/终点段横向偏移，dy 为绕行段纵向偏移；旧 dx 向后兼容作为横向初值
+  const offs=w=>({dxa:w.dxa!=null?w.dxa:(w.dx||0),dxb:w.dxb!=null?w.dxb:(w.dx||0),dy:w.dy||0});
+  // 先为连线分配错开的走线通道（含用户拖拽偏移）
+  const laneMap={};                // 同机柜连线：按机柜左右侧分组
+  const crossGrp={top:0,bottom:0}; // 跨机柜连线：按顶/底分别错开外绕通道
+  (state.wires||[]).forEach(w=>{
+    if(w.from.rack!==w.to.rack){
+      const a=portCenter(w.from.rack,w.from.dev,w.from.port), b=portCenter(w.to.rack,w.to.dev,w.to.port);
+      if(!a||!b){w._crossLane=Object.assign({o:0,side:'top'},offs(w));return}
+      const cA=geo.cards[w.from.rack], cB=geo.cards[w.to.rack];
+      let side='top';
+      if(cA&&cB){
+        const ua=a.y<cA.midY, ub=b.y<cB.midY;
+        side=(ua&&ub)?'top':(!ua&&!ub)?'bottom':(ua?'top':'bottom');
+      }
+      w._crossLane=Object.assign({o:crossGrp[side]++,side:side},offs(w));return;
+    }
+    const a=portCenter(w.from.rack,w.from.dev,w.from.port), b=portCenter(w.to.rack,w.to.dev,w.to.port);
+    if(!a||!b)return;
+    const card=geo.cards[w.from.rack];
+    if(!card)return;
+    const aR=a.x>=card.midX,bR=b.x>=card.midX;
+    if(!laneMap[w.from.rack])laneMap[w.from.rack]={l:0,r:0,t:0};
+    const lm=laneMap[w.from.rack];
+    w._lane=aR===bR?Object.assign({r:(aR?lm.r++:lm.l++)},offs(w)):Object.assign({t:lm.t++},offs(w));
+  });
+  (state.wires||[]).forEach(w=>{
+    const a=portCenter(w.from.rack,w.from.dev,w.from.port), b=portCenter(w.to.rack,w.to.dev,w.to.port);
+    if(!a||!b)return;
+    const st=Object.assign({},WIRE_DEF,w);
+    const lane=(w.from.rack===w.to.rack)?(w._lane||{r:0}):(w._crossLane||{o:0});
+    const d=(w.from.rack===w.to.rack)?intraRackPath(a,b,w.from.rack,lane)
+      :crossRackPath(a,b,w.from.rack,w.to.rack,lane);
+    // 仅选中的连线显示可拖动白点（起点段/绕行段/终点段各自一个）
+    if(w.id===selWire&&lane.handles)lane.handles.forEach((hp,i)=>{
+      handles.push('<circle class="wire-handle" data-wire="'+w.id+'" data-key="'+hp.key+'" data-axis="'+hp.axis+'" data-idx="'+i+'" cx="'+hp.x+'" cy="'+hp.y+'" r="5"><title>拖动调整走线位置</title></circle>');
+    });
+    const dash=DASH[st.dash]||'none';
+    const uidm='m'+w.id;
+    const col=st.color;
+    defs.push('<marker id="'+uidm+'-e" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="'+col+'"/></marker>');
+    defs.push('<marker id="'+uidm+'-s" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="'+col+'"/></marker>');
+    const mStart=(st.arrow==='start'||st.arrow==='both')?' marker-start="url(#'+uidm+'-s)"':'';
+    const mEnd=(st.arrow==='end'||st.arrow==='both')?' marker-end="url(#'+uidm+'-e)"':'';
+    paths.push('<path class="wire'+(w.id===selWire?' sel':'')+'" data-wire="'+w.id+'" d="'+d+'" fill="none" stroke="'+col+'" stroke-width="'+st.width+'" stroke-dasharray="'+dash+'" stroke-linejoin="round"'+mStart+mEnd+'/>');
+  });
+  svg.innerHTML='<defs>'+defs.join('')+'</defs>'+paths.join('')+handles.join('');
+  svg.querySelectorAll('path.wire').forEach(p=>p.addEventListener('click',e=>{e.stopPropagation();selWire=p.dataset.wire;renderWires();openWireEditor(p.dataset.wire)}));
+  svg.querySelectorAll('circle.wire-handle').forEach(h=>h.addEventListener('mousedown',e=>startHandleDrag(e,h)));
+}
+// 连线控制点拖拽：按控制点所在轴(水平=改Y偏移,垂直=改X偏移)微调走线
+function startHandleDrag(e,handle){
+  if(e.button!==0)return;
+  e.stopPropagation();e.preventDefault();
+  const w=(state.wires||[]).find(x=>x.id===handle.dataset.wire);
+  if(!w)return;
+  const key=handle.dataset.key||'dy', axis=handle.dataset.axis||'h';
+  const z=zoom(),sx=e.clientX,sy=e.clientY;
+  const o=(key==='dy')?(w.dy||0):(w[key]!=null?w[key]:(w.dx||0)); // 起点/终点段横向偏移，兼容旧 dx
+  handle.classList.add('dragging');
+  function move(ev){
+    const delta=(ev.clientX-sx)/z;
+    const dY=(ev.clientY-sy)/z;
+    w[key]=Math.round(o+(axis==='v'?delta:dY));
+    renderWires();
+    const nh=document.querySelector('.wire-handle[data-wire="'+w.id+'"][data-key="'+key+'"]');
+    if(nh)nh.classList.add('dragging');
+  }
+  let ended=false;
+  function up(){
+    if(ended)return;ended=true;
+    document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+    window.removeEventListener('mouseup',up);
+    window.removeEventListener('pointercancel',up);
+    window.removeEventListener('blur',up);
+    handle.removeEventListener('dragend',up);
+    save();
+  }
+  document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+  window.addEventListener('mouseup',up);
+  window.addEventListener('pointercancel',up);
+  window.addEventListener('blur',up);
+  handle.addEventListener('dragend',up);
+}
+function portLabel(ref){
+  const r=state.racks.find(x=>x.id===ref.rack);if(!r)return '?';
+  const d=r.devices.find(x=>x.id===ref.dev);if(!d)return r.name;
+  const p=(d.ports||[]).find(x=>x.id===ref.port);
+  return r.name+' · '+d.name+' · '+(p?p.name:'?');
+}
+function toggleLinkMode(on){
+  linkMode=(on===undefined)?!linkMode:on;
+  pendingPort=null;
+  document.getElementById('linkMode').classList.toggle('on',linkMode);
+  document.body.style.cursor=linkMode?'crosshair':'';
+  document.querySelectorAll('.port').forEach(p=>p.classList.remove('linking','hot'));
+  if(linkMode)document.querySelectorAll('.port').forEach(p=>p.classList.add('hot'));
+  toast(linkMode?'连接模式：点击端口选择起点':'已退出连接模式');
+}
+function onPortClick(el){
+  const ref={rack:el.dataset.rack,dev:el.dataset.dev,port:el.dataset.port};
+  // 无起点：点任意端口即自动进入连接模式，并以其为起点
+  if(!pendingPort){
+    linkMode=true;
+    document.getElementById('linkMode').classList.add('on');
+    document.body.style.cursor='crosshair';
+    document.querySelectorAll('.port').forEach(p=>p.classList.remove('linking','hot'));
+    document.querySelectorAll('.port').forEach(p=>p.classList.add('hot'));
+    pendingPort=ref;el.classList.remove('hot');el.classList.add('linking');
+    toast('起点：'+portLabel(ref)+' — 点击另一端口完成连接，Esc 取消');return;
+  }
+  // 再点起点端口：取消连接
+  if(pendingPort.rack===ref.rack&&pendingPort.dev===ref.dev&&pendingPort.port===ref.port){toggleLinkMode(false);toast('已取消连接');return}
+  // 点另一端口：创建连接
+  const w=Object.assign({id:uid(),from:pendingPort,to:ref},WIRE_DEF);
+  state.wires.push(w);selWire=w.id;save();toggleLinkMode(false);render();openWireEditor(w.id);
+  toast('已创建连接');
+}
+function openDeviceFromPort(el){
+  const rack=state.racks.find(r=>r.id===el.dataset.rack);
+  const dev=rack&&rack.devices.find(d=>d.id===el.dataset.dev);
+  if(dev)openEditor(rack.id,dev.id);
+}
+
+function bindCanvas(){
+  // 画布空白区点击：取消所有机柜选择（点击机柜/机房标题/连线等不触发）
+  const canvasEl=document.getElementById('canvas');
+  if(!canvasEl._blankBound){
+    canvasEl._blankBound=true;
+    canvasEl.addEventListener('click',e=>{
+      if(e.target.closest('.rack-card')||e.target.closest('.room-title')||e.target.closest('.textbox'))return;
+      // 点击连线本身不会到达这里（已 stopPropagation）；到达此处的都是空白区
+      // 文本框编辑抽屉打开时，点空白默认保存（提交当前编辑内容）
+      const textDrawer=document.getElementById('textDrawer');
+      const textEditing=textDrawer&&textDrawer.classList.contains('open')&&textEdit.id;
+      if(textEditing&&typeof commitTextEdit==='function')commitTextEdit();
+      let changed=false;
+      if(rackSel.size){rackSel.clear();changed=true}
+      if(selWire){selWire=null;changed=true}
+      // 点空白处自动关闭所有打开的信息面板（设备编辑/连接编辑/连接列表/尺寸/文本框）
+      document.querySelectorAll('.drawer.open').forEach(d=>d.classList.remove('open'));
+      if(changed||textEditing)render();
+    });
+  }
+  // 端口点击
+  document.querySelectorAll('.port').forEach(el=>el.addEventListener('click',e=>{e.stopPropagation();onPortClick(el)}));
+  // 机柜头部：拖动移动机柜；未拖动则点击设为当前
+  document.querySelectorAll('.rack-head').forEach(el=>{
+    el.addEventListener('mousedown',e=>startMove(e,el,'rack'));
+    el.addEventListener('click',e=>{
+      if(el._moved)return;
+      const id=el.dataset.focus;
+      if(e.ctrlKey||e.metaKey){
+        if(rackSel.has(id))rackSel.delete(id);else rackSel.add(id);
+        render();
+      }else{
+        rackSel.clear();rackSel.add(id);state.focus=id;save();render();
+      }
+    });
+  });
+  // 机房名：拖动移动
+  const titleEl=document.getElementById('roomTitle');
+  if(titleEl)titleEl.addEventListener('mousedown',e=>startMove(e,titleEl,'room'));
+  // 文本框：拖顶部条移动；双击文字编辑；编辑/删除按钮
+  document.querySelectorAll('.textbox').forEach(tb=>{
+    const bar=tb.querySelector('.tb-bar');
+    if(bar)bar.addEventListener('mousedown',e=>{
+      if(e.target.closest('.tb-act'))return;
+      e.stopPropagation();startMove(e,tb,'text');
+    });
+    const txt=tb.querySelector('.tb-text');
+    if(txt)txt.addEventListener('dblclick',e=>{e.stopPropagation();openTextEditor(tb.dataset.tb)});
+  });
+  document.querySelectorAll('.tb-act').forEach(a=>a.addEventListener('click',e=>{
+    e.stopPropagation();
+    const id=a.dataset.tb;
+    if(a.dataset.tbact==='edit')openTextEditor(id);
+    else if(a.dataset.tbact==='del')deleteTextbox(id);
+  }));
+  // 通用拖拽移动（机柜 / 机房名）
+  function startMove(e,el,kind){
+    if(e.button!==0)return;
+    // 阻止浏览器原生的文本选中与元素拖放；否则原生 drag 会吞掉 mouseup，
+    // 导致拖拽结束回调不执行，机柜一直粘着鼠标无法释放。
+    e.preventDefault();
+    if(el.setPointerCapture){try{el.setPointerCapture(e.pointerId)}catch(_){}}
+    const canvas=document.getElementById('canvas');
+    const sx=e.clientX,sy=e.clientY;
+    let ox,oy,snap=null,minX=0,minY=0;
+    if(kind==='rack'){
+      const id=el.dataset.focus,r=state.racks.find(x=>x.id===id);
+      const group=(rackSel.has(id)&&rackSel.size>1)?selectedRacks():[r];
+      snap=group.map(g=>({r:g,x:g.pos.x,y:g.pos.y}));
+      ox=r.pos.x;oy=r.pos.y;
+      minX=Math.min(...snap.map(s=>s.x));minY=Math.min(...snap.map(s=>s.y));
+    }else if(kind==='text'){
+      const tb=state.textboxes.find(x=>x.id===el.dataset.tb);
+      if(!tb)return;
+      ox=tb.x;oy=tb.y;
+    }else{ox=state.roomPos.x;oy=state.roomPos.y}
+    el._moved=false;
+    function paint(ev){
+      const z=zoom();
+      const dx=(ev.clientX-sx)/z,dy=(ev.clientY-sy)/z;
+      if(kind==='rack'){
+        const adx=Math.max(-minX,dx),ady=Math.max(-minY,dy);
+        snap.forEach(s=>{
+          s.r.pos.x=s.x+adx;s.r.pos.y=s.y+ady;
+          const card=canvas.querySelector('.rack-card[data-rack="'+s.r.id+'"]');
+          if(card){card.style.left=s.r.pos.x+'px';card.style.top=s.r.pos.y+'px';card.classList.add('moving')}
+        });
+      }else if(kind==='text'){
+        const tb=state.textboxes.find(x=>x.id===el.dataset.tb);
+        tb.x=Math.max(0,Math.round(ox+dx));tb.y=Math.max(0,Math.round(oy+dy));
+        el.style.left=tb.x+'px';el.style.top=tb.y+'px';el.classList.add('moving');
+      }else{
+        const nx=Math.max(0,ox+dx),ny=Math.max(0,oy+dy);
+        state.roomPos.x=nx;state.roomPos.y=ny;
+        el.style.left=nx+'px';el.style.top=ny+'px';
+      }
+      renderWires(); // 几何快照已在 renderWires 内批量读取，拖运逐帧仅重绘连线
+    }
+    const paintRAF=rafThrottle(paint);
+    function move(ev){
+      const z=zoom(),dx=(ev.clientX-sx)/z,dy=(ev.clientY-sy)/z;
+      if(Math.abs(dx)<3&&Math.abs(dy)<3&&!el._moved)return;
+      el._moved=true;paintRAF(ev);
+    }
+    let ended=false;
+    function up(){
+      if(ended)return;ended=true;
+      // 注意：必须移除 moveTracked（与 addEventListener 的引用一致），
+      // 否则 mousemove 监听残留，松开鼠标后机柜仍会跟随移动。
+      document.removeEventListener('mousemove',moveTracked);
+      document.removeEventListener('mouseup',up);
+      window.removeEventListener('mouseup',up);
+      window.removeEventListener('pointercancel',up);
+      window.removeEventListener('blur',up);
+      el.removeEventListener('dragend',up);
+      if(el.releasePointerCapture){try{el.releasePointerCapture(e.pointerId)}catch(_){}}
+      paintRAF.cancel();if(el._moved)paintRAF.flush(lastMoveEv||{clientX:sx,clientY:sy});
+      document.querySelectorAll('.rack-card.moving,.textbox.moving').forEach(c=>c.classList.remove('moving'));
+      if(el._moved){
+        fitCanvas();save();
+        toast(kind==='rack'?(snap&&snap.length>1?snap.length+' 个机柜位置已保存':'机柜位置已保存'):kind==='text'?'文本框位置已保存':'机房名位置已保存');
+      }
+      setTimeout(()=>{el._moved=false},0);
+    }
+    let lastMoveEv=null;
+    function moveTracked(ev){lastMoveEv=ev;move(ev)}
+    document.addEventListener('mousemove',moveTracked);document.addEventListener('mouseup',up);
+    // 多重兜底：鼠标在窗口外/预览面板松开、触控取消、窗口失焦、原生拖放结束时都要能释放
+    window.addEventListener('mouseup',up);
+    window.addEventListener('pointercancel',up);
+    window.addEventListener('blur',up);
+    el.addEventListener('dragend',up);
+  }
+  document.querySelectorAll('.rack-actions .btn').forEach(b=>b.addEventListener('click',()=>{
+    const id=b.dataset.rack;
+    if(b.dataset.act==='setsize'){
+      openSizeEditor('single',id);
+    }else if(b.dataset.act==='copy'){
+      const src=state.racks.find(r=>r.id===id),n=nextRackName();
+      const cp=JSON.parse(JSON.stringify(src));cp.id=uid();cp.name=n;
+      cp.devices.forEach(d=>{d.id=uid();(d.ports||[]).forEach(p=>p.id=uid())});
+      cp.pos={x:src.pos.x+306,y:src.pos.y};
+      state.racks.push(cp);state.focus=cp.id;rackSel.clear();rackSel.add(cp.id);
+      save();render();toast('已复制为 '+n);
+    }else if(b.dataset.act==='del'){
+      if(state.racks.length<=1){toast('至少保留一个机柜');return}
+      rackSel.delete(id);
+      removeWiresOf(id,null);
+      state.racks=state.racks.filter(r=>r.id!==id);if(state.focus===id)state.focus=state.racks[0].id;
+      save();render();toast('已删除机柜及相关连接');
+    }else if(b.dataset.act==='editname'){
+      const r=state.racks.find(x=>x.id===id),v=prompt('机柜名称',r.name);
+      if(v&&v.trim()){r.name=v.trim();save();render()}
+    }else if(b.dataset.act==='setu'){
+      const r=state.racks.find(x=>x.id===id);
+      const v=parseInt(prompt('机柜 U 数（常用 20/32/42/45/48，范围 4-60）',r.totalU),10);
+      if(!isNaN(v)){
+        r.totalU=clamp(v,4,60);
+        // 越界设备收敛到机柜内
+        r.devices.forEach(d=>{
+          if(d.sizeU>r.totalU)d.sizeU=r.totalU;
+          if(d.startU<1)d.startU=1;
+          if(d.startU+d.sizeU-1>r.totalU)d.startU=r.totalU-d.sizeU+1;
+        });
+        resolveAllOverlaps(r);
+        save();render();toast('机柜已设为 '+r.totalU+'U');
+      }
+    }
+  }));
+  document.querySelectorAll('.device').forEach(el=>{
+    el.addEventListener('click',e=>{if(!el._moved)openEditor(el.dataset.rack,el.dataset.dev)});
+    el.addEventListener('mousedown',e=>startDrag(e,el));
+  });
+  // 浅色空闲行双击添加
+  if(state.theme==='light'){
+    document.querySelectorAll('.u-row').forEach(row=>row.addEventListener('dblclick',()=>{
+      addDeviceAt(currentRack().id,parseInt(row.dataset.u));
+    }));
+  }
+  // 深色空白区双击添加
+  if(state.theme==='dark'){
+    document.querySelectorAll('.rack-body').forEach(body=>{
+      body.addEventListener('dblclick',e=>{
+        if(e.target.closest('.device'))return;
+        const r=state.racks.find(x=>x.id===body.parentElement.dataset.rack);
+        const rect=body.getBoundingClientRect(),y=(e.clientY-rect.top)/zoom();
+        const u=uFromY(r,y);
+        addDeviceAt(r.id,u);
+      });
+    });
+  }
+}
+
+function startDrag(e,el){
+  if(e.button!==0)return;
+  e.preventDefault();
+  if(el.setPointerCapture){try{el.setPointerCapture(e.pointerId)}catch(_){}}
+  const rack=state.racks.find(r=>r.id===el.dataset.rack);
+  const dev=rack.devices.find(d=>d.id===el.dataset.dev);
+  if(!dev)return;
+  const uh=unitH(rack),startY=e.clientY,origU=dev.startU;
+  const maxU=rack.totalU-dev.sizeU+1;
+  el._moved=false;
+    function move(ev){
+      const dy=(ev.clientY-startY)/zoom();
+      if(Math.abs(dy)<3&&!el._moved)return;
+      el._moved=true;el.classList.add('dragging');
+      const nu=clamp(uAfterDrag(origU,Math.round(dy/uh)),1,maxU);
+    dev.startU=nu;
+    const newTop=devTop(rack,dev);
+    el.style.top=newTop+'px';
+    // 同步移动该设备的端口锚点（左右两侧各自居中）
+    const h=dev.sizeU*uh, ph=12, gap=1;
+    (dev.ports||[]).forEach(p=>{
+      const side=p.side==='left'?'left':'right';
+      const group=(dev.ports||[]).filter(x=>(x.side==='left'?'left':'right')===side);
+      const gi=group.indexOf(p), total=group.length*ph+(group.length-1)*gap;
+      const pe=document.querySelector('.port[data-rack="'+rack.id+'"][data-dev="'+dev.id+'"][data-port="'+p.id+'"]');
+      if(pe)pe.style.top=(newTop+(h-total)/2+gi*(ph+gap))+'px';
+    });
+    const card=el.closest('.rack-card');
+    card.querySelectorAll('.u-ruler span.hi').forEach(s=>s.classList.remove('hi'));
+    for(let u=nu;u<nu+dev.sizeU;u++){
+      card.querySelectorAll('.u-ruler span[data-u="'+u+'"]').forEach(s=>s.classList.add('hi'));
+    }
+    renderWires();
+  }
+  let ended=false;
+  function up(){
+    if(ended)return;ended=true;
+    document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up);
+    window.removeEventListener('mouseup',up);
+    window.removeEventListener('pointercancel',up);
+    window.removeEventListener('blur',up);
+    el.removeEventListener('dragend',up);
+    if(el.releasePointerCapture){try{el.releasePointerCapture(e.pointerId)}catch(_){}}
+    el.classList.remove('dragging');
+    if(el._moved){
+      const moved=resolveOverlaps(rack,dev.id);
+      save();setTimeout(()=>{
+        render();
+        toast(moved.length?('U位已更新，'+moved.length+'个重叠设备已自动避让'):('U位已更新为 U'+dev.startU));
+      },0);
+    }
+    setTimeout(()=>{el._moved=false},0);
+  }
+  document.addEventListener('mousemove',move);document.addEventListener('mouseup',up);
+  window.addEventListener('mouseup',up);
+  window.addEventListener('pointercancel',up);
+  window.addEventListener('blur',up);
+  el.addEventListener('dragend',up);
+}
+
+function nextRackName(){
+  let i=state.racks.length+1,n;
+  do{n='A-'+String(i).padStart(2,'0');i++}while(state.racks.some(r=>r.name===n));
+  return n;
+}
+function addDeviceAt(rackId,u){
+  const r=state.racks.find(x=>x.id===rackId);
+  const total=r.totalU;
+  openEditor(rackId,null,clamp(u,1,total-1));
+}
+function openEditor(rackId,devId,preU){
+  const rack=state.racks.find(r=>r.id===rackId);
+  const dev=devId?rack.devices.find(d=>d.id===devId):null;
+  edit.rackId=rackId;edit.devId=dev?devId:null;
+  document.getElementById('drawerTitle').firstChild.nodeValue=dev?'编辑设备 ':'新增设备 ';
+  document.getElementById('f_name').value=dev?dev.name:'';
+  document.getElementById('f_model').value=dev?dev.model:'';
+  document.getElementById('f_type').value=dev?dev.type:'server';
+  document.getElementById('f_sizeU').value=dev?dev.sizeU:2;
+  document.getElementById('f_startU').value=dev?dev.startU:(preU||1);
+  document.getElementById('f_note').value=dev?dev.note:'';
+  edit.draftColor=dev?dev.color:TYPE_COLOR.server;
+  edit.draftStatus=dev?dev.status:'normal';
+  edit.draftPorts=dev?JSON.parse(JSON.stringify(dev.ports||[])):[];
+  renderPorts();renderSwatches();renderStatus();
+  document.getElementById('delDev').style.display=dev?'block':'none';
+  document.getElementById('drawer').classList.add('open');
+}
+function renderSwatches(){
+  document.getElementById('f_colors').innerHTML=COLORS.map(c=>'<div class="sw'+(c===edit.draftColor?' sel':'')+'" style="background:'+c+'" data-c="'+c+'"></div>').join('');
+  document.querySelectorAll('.sw').forEach(s=>s.addEventListener('click',()=>{edit.draftColor=s.dataset.c;renderSwatches()}));
+}
+function renderStatus(){
+  document.querySelectorAll('#f_status button').forEach(b=>b.classList.toggle('sel',b.dataset.v===edit.draftStatus));
+}
+function renderPorts(){
+  const box=document.getElementById('f_ports');
+  box.innerHTML=edit.draftPorts.map((p,i)=>{
+    const side=p.side==='left'?'left':'right';
+    return '<div class="port-row">'
+      +'<input value="'+esc(p.name)+'" data-pi="'+i+'" placeholder="端口名，如 GE1">'
+      +'<select class="port-side" data-pi="'+i+'" title="端口显示在设备哪一侧">'
+        +'<option value="right"'+(side==='right'?' selected':'')+'>右侧</option>'
+        +'<option value="left"'+(side==='left'?' selected':'')+'>左侧</option>'
+      +'</select>'
+      +'<span class="x" data-delpi="'+i+'">×</span></div>';
+  }).join('');
+  box.querySelectorAll('input[data-pi]').forEach(inp=>inp.addEventListener('input',e=>{edit.draftPorts[+e.target.dataset.pi].name=e.target.value}));
+  box.querySelectorAll('select[data-pi]').forEach(sel=>sel.addEventListener('change',e=>{edit.draftPorts[+e.target.dataset.pi].side=e.target.value}));
+  box.querySelectorAll('[data-delpi]').forEach(x=>x.onclick=()=>{edit.draftPorts.splice(+x.dataset.delpi,1);renderPorts()});
+}
+document.getElementById('addPort').onclick=()=>{
+  edit.draftPorts.push({id:uid(),name:'GE'+(edit.draftPorts.length+1),side:'right'});renderPorts();
+  const inputs=document.querySelectorAll('#f_ports input');if(inputs.length)inputs[inputs.length-1].focus();
+};
+document.querySelectorAll('#f_status button').forEach(b=>b.addEventListener('click',()=>{edit.draftStatus=b.dataset.v;renderStatus()}));
+document.getElementById('closeDrawer').onclick=()=>document.getElementById('drawer').classList.remove('open');
+document.getElementById('cancelEdit').onclick=()=>document.getElementById('drawer').classList.remove('open');
+document.getElementById('saveDev').onclick=()=>{
+  const rack=state.racks.find(r=>r.id===edit.rackId);
+  const sizeU=clamp(parseInt(document.getElementById('f_sizeU').value)||1,1,rack.totalU);
+  const startU=clamp(parseInt(document.getElementById('f_startU').value)||1,1,rack.totalU-sizeU+1);
+  const data={name:document.getElementById('f_name').value.trim()||'未命名设备',model:document.getElementById('f_model').value.trim(),
+    type:document.getElementById('f_type').value,sizeU,startU,color:edit.draftColor,status:edit.draftStatus,note:document.getElementById('f_note').value.trim(),
+    ports:edit.draftPorts.map(p=>({id:p.id,name:(p.name||'端口').trim(),side:p.side==='left'?'left':'right'}))};
+  let fixedId;
+  if(edit.devId){fixedId=edit.devId;Object.assign(rack.devices.find(d=>d.id===edit.devId),data)}
+  else{fixedId=uid();rack.devices.push(Object.assign({id:fixedId},data))}
+  const moved=resolveOverlaps(rack,fixedId);
+  save();render();document.getElementById('drawer').classList.remove('open');
+  toast(moved.length?('已保存，'+moved.length+'个重叠设备已自动避让'):'已保存');
+};
+function removeWiresOf(rackId,devId){
+  const portIds=new Set();
+  const r=state.racks.find(x=>x.id===rackId);
+  if(r){
+    const devs=devId?[r.devices.find(d=>d.id===devId)].filter(Boolean):r.devices;
+    devs.forEach(d=>(d.ports||[]).forEach(p=>portIds.add(p.id)));
+  }
+  state.wires=(state.wires||[]).filter(w=>{
+    if(rackId&&!devId)return w.from.rack!==rackId&&w.to.rack!==rackId;
+    return !portIds.has(w.from.port)&&!portIds.has(w.to.port);
+  });
+}
+document.getElementById('delDev').onclick=()=>{
+  if(!edit.devId)return;
+  const rack=state.racks.find(r=>r.id===edit.rackId);
+  rack.devices=rack.devices.filter(d=>d.id!==edit.devId);
+  removeWiresOf(edit.rackId,edit.devId);
+  save();render();document.getElementById('drawer').classList.remove('open');toast('已删除设备及相关连接');
+};
+
+// ============ 连接编辑 ============
+function wirePreview(){
+  const w=Object.assign({},WIRE_DEF,(state.wires||[]).find(x=>x.id===wireEdit.id)||{});
+  w.color=wireEdit.color;
+  w.name=document.getElementById('w_name').value;
+  w.width=+document.getElementById('w_width').value;
+  w.dash=document.getElementById('w_dash').value;
+  w.arrow=document.getElementById('w_arrow').value;
+  w.shape=document.getElementById('w_shape').value;
+  const d=wirePath({x:8,y:14},{x:292,y:14},w.shape==='ortho'?'ortho':w.shape==='straight'?'straight':'curve');
+  const dash=DASH[w.dash]||'none';
+  const mEnd=(w.arrow==='end'||w.arrow==='both')?' marker-end="url(#pv-e)"':'';
+  const mStart=(w.arrow==='start'||w.arrow==='both')?' marker-start="url(#pv-s)"':'';
+  document.getElementById('wirePreview').innerHTML='<svg viewBox="0 0 300 28"><defs>'
+    +'<marker id="pv-e" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="'+w.color+'"/></marker>'
+    +'<marker id="pv-s" markerWidth="8" markerHeight="8" refX="0" refY="3" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="M0,0 L7,3 L0,6 Z" fill="'+w.color+'"/></marker>'
+    +'</defs><path d="'+d+'" fill="none" stroke="'+w.color+'" stroke-width="'+w.width+'" stroke-dasharray="'+dash+'"'+mStart+mEnd+'/></svg>';
+}
+function renderWireColors(){
+  document.getElementById('w_colors').innerHTML=WIRE_COLORS.map(c=>'<div class="sw'+(c===wireEdit.color?' sel':'')+'" style="background:'+c+'" data-c="'+c+'"></div>').join('');
+  document.querySelectorAll('#w_colors .sw').forEach(s=>s.onclick=()=>{wireEdit.color=s.dataset.c;renderWireColors();wirePreview()});
+}
+function openWireEditor(id){
+  const w=(state.wires||[]).find(x=>x.id===id);if(!w)return;
+  wireEdit.id=id;wireEdit.color=w.color||WIRE_DEF.color;
+  document.getElementById('wirePath').textContent=portLabel(w.from)+'  →  '+portLabel(w.to);
+  document.getElementById('w_name').value=w.name||'';
+  document.getElementById('w_width').value=w.width||2;
+  document.getElementById('w_dash').value=w.dash||'solid';
+  document.getElementById('w_arrow').value=w.arrow||'end';
+  document.getElementById('w_shape').value=w.shape||'ortho';
+  renderWireColors();wirePreview();
+  document.getElementById('wireDrawer').classList.add('open');
+}
+['w_name','w_width','w_dash','w_arrow','w_shape'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',wirePreview);
+});
+document.getElementById('closeWire').onclick=()=>document.getElementById('wireDrawer').classList.remove('open');
+document.getElementById('cancelWire').onclick=()=>document.getElementById('wireDrawer').classList.remove('open');
+document.getElementById('saveWire').onclick=()=>{
+  const w=(state.wires||[]).find(x=>x.id===wireEdit.id);if(!w)return;
+  w.name=document.getElementById('w_name').value.trim();
+  w.color=wireEdit.color;w.width=+document.getElementById('w_width').value;
+  w.dash=document.getElementById('w_dash').value;w.arrow=document.getElementById('w_arrow').value;w.shape=document.getElementById('w_shape').value;
+  save();render();document.getElementById('wireDrawer').classList.remove('open');toast('连接样式已保存');
+};
+document.getElementById('delWire').onclick=()=>{
+  state.wires=(state.wires||[]).filter(x=>x.id!==wireEdit.id);
+  save();render();document.getElementById('wireDrawer').classList.remove('open');toast('连接已删除');
+};
+// ============ 机柜尺寸编辑（统一 / 单个） ============
+let sizeEdit={mode:'global',rackId:null,scope:'global'};
+function openSizeEditor(mode,rackId){
+  sizeEdit.mode=mode;sizeEdit.rackId=rackId||null;sizeEdit.scope='global';
+  const rack=mode==='single'?state.racks.find(r=>r.id===rackId):null;
+  if(mode==='single'&&!rack)return;
+  const w=rack?rackW(rack):state.size.width;
+  const uh=rack?unitH(rack):state.size.unitH;
+  const tu=rack?rack.totalU:state.size.totalU;
+  document.getElementById('s_width').value=w;
+  document.getElementById('s_unitH').value=uh;
+  document.getElementById('s_totalU').value=tu;
+  const single=mode==='single';
+  document.getElementById('sizeDrawerTitle').firstChild.nodeValue=single?('单独尺寸 · '+(rack?rack.name:'')):'统一机柜尺寸 ';
+  document.getElementById('sizeTip').textContent=single?'仅修改此机柜的宽高与U数，其他机柜不变。':'一次设置全部机柜默认尺寸，可选择是否覆盖已单独设置的机柜。';
+  document.getElementById('sizeScopeWrap').style.display=single?'none':'block';
+  document.getElementById('sizeSingleTip').style.display=single?'block':'none';
+  document.getElementById('sizeReset').style.display=single?'block':'none';
+  renderSizeScope();
+  document.getElementById('sizeDrawer').classList.add('open');
+}
+function renderSizeScope(){
+  document.querySelectorAll('#sizeScope button').forEach(b=>b.classList.toggle('sel',b.dataset.v===sizeEdit.scope));
+}
+function syncRackDevices(r){
+  // U 数变化后收敛越界设备并消除重叠
+  r.devices.forEach(d=>{
+    if(d.sizeU>r.totalU)d.sizeU=r.totalU;
+    if(d.startU<1)d.startU=1;
+    if(d.startU+d.sizeU-1>r.totalU)d.startU=r.totalU-d.sizeU+1;
+  });
+  resolveAllOverlaps(r);
+}
+document.querySelectorAll('#sizeScope button').forEach(b=>b.onclick=()=>{sizeEdit.scope=b.dataset.v;renderSizeScope()});
+// ===== 缩放控件事件 =====
+document.getElementById('zoomOut').onclick=()=>setZoom(zoom()-0.1);
+document.getElementById('zoomIn').onclick=()=>setZoom(zoom()+0.1);
+document.getElementById('zoomReset').onclick=()=>setZoom(1);
+document.getElementById('zoomFit').onclick=()=>fitZoom();
+document.getElementById('zoomVal').onclick=()=>setZoom(1);
+document.getElementById('zoomVal').style.cursor='pointer';
+document.getElementById('zoomVal').title='点击重置为100%';
+// Ctrl/⌘ + 滚轮在画布上缩放
+document.getElementById('stage').addEventListener('wheel',e=>{
+  if(!(e.ctrlKey||e.metaKey))return;
+  e.preventDefault();
+  setZoom(zoom()+(e.deltaY<0?0.1:-0.1));
+},{passive:false});
+window.addEventListener('resize',syncStageSize);
+
+document.getElementById('sizeGlobalBtn').onclick=()=>openSizeEditor('global');
+document.getElementById('closeSize').onclick=()=>document.getElementById('sizeDrawer').classList.remove('open');
+document.getElementById('cancelSize').onclick=()=>document.getElementById('sizeDrawer').classList.remove('open');
+document.getElementById('saveSize').onclick=()=>{
+  const w=clamp(parseInt(document.getElementById('s_width').value)||250,140,600);
+  const uh=clamp(parseInt(document.getElementById('s_unitH').value)||17,10,40);
+  const tu=clamp(parseInt(document.getElementById('s_totalU').value)||42,4,60);
+  if(sizeEdit.mode==='single'){
+    const r=state.racks.find(x=>x.id===sizeEdit.rackId);if(!r)return;
+    r.w=w;r.unitH=uh;r.totalU=tu;syncRackDevices(r);
+    toast(r.name+' 尺寸已设为 '+w+'px · '+uh+'px/U · '+tu+'U');
+  }else{
+    state.size={width:w,unitH:uh,totalU:tu};
+    if(sizeEdit.scope==='all'){
+      state.racks.forEach(r=>{
+        delete r.w;delete r.unitH;r.totalU=tu;syncRackDevices(r);
+      });
+      toast('已统一全部 '+state.racks.length+' 个机柜的尺寸');
+    }else{
+      toast('已设为默认尺寸，未单独设置的机柜随之更新');
+    }
+  }
+  save();render();document.getElementById('sizeDrawer').classList.remove('open');
+};
+document.getElementById('sizeReset').onclick=()=>{
+  const r=state.racks.find(x=>x.id===sizeEdit.rackId);if(!r)return;
+  delete r.w;delete r.unitH;r.totalU=state.size.totalU;syncRackDevices(r);
+  save();render();document.getElementById('sizeDrawer').classList.remove('open');
+  toast(r.name+' 已恢复默认尺寸');
+};
+
+// ============ 文本框编辑 ============
+const TEXT_COLORS=['#e8eaf6','#ffffff','#000000','#37474f','#1f3b5a','#1565c0','#00acc1','#2e7d32','#fdd835','#ef6c00','#c62828','#6a1b9a'];
+const TEXT_BGS=['transparent','rgba(31,59,90,.92)','rgba(0,0,0,.75)','rgba(255,255,255,.95)','#e3f2fd','#e8f5e9','#fff3e0','#f3e5f5','#212121','#1565c0','#2e7d32','#c62828'];
+const TEXT_BORDERS=['transparent','#1f3b5a','#5c7cfa','#ffffff','#37474f','#1565c0','#00acc1','#2e7d32','#ef6c00','#c62828','#6a1b9a','#fdd835'];
+let textEdit={id:null,align:'left',color:'#e8eaf6',bg:'transparent',border:'transparent'};
+function renderSwatches(el,colors,current,onPick){
+  if(!el)return;
+  el.innerHTML=colors.map(c=>{
+    const bg=(c==='transparent')?'repeating-conic-gradient(#cfd8dc 0% 25%, #fff 0% 50%) 50%/10px 10px':c;
+    return '<span class="sw'+(c===current?' sel':'')+'" data-v="'+c+'" title="'+c+'" style="background:'+bg+'"></span>';
+  }).join('');
+  el.querySelectorAll('.sw').forEach(sw=>sw.onclick=()=>{
+    el.querySelectorAll('.sw').forEach(s=>s.classList.remove('sel'));
+    sw.classList.add('sel');onPick(sw.dataset.v);
+  });
+}
+function openTextEditor(id){
+  const tb=state.textboxes.find(x=>x.id===id);if(!tb)return;
+  textEdit.id=id;textEdit.align=tb.align||'left';
+  textEdit.color=tb.color||'#e8eaf6';textEdit.bg=tb.bg||'transparent';textEdit.border=tb.border||'transparent';
+  document.getElementById('t_text').value=tb.text||'';
+  document.getElementById('t_fontSize').value=tb.fontSize||14;
+  document.getElementById('t_width').value=tb.w||180;
+  document.getElementById('t_bold').checked=!!tb.bold;
+  document.getElementById('t_radius').value=tb.radius==null?8:tb.radius;
+  document.getElementById('t_pad').value=tb.pad==null?8:tb.pad;
+  document.getElementById('t_opacity').value=tb.opacity==null?100:tb.opacity;
+  document.getElementById('t_borderW').value=String(tb.borderW==null?1:tb.borderW);
+  document.querySelectorAll('#t_align button').forEach(b=>b.classList.toggle('sel',b.dataset.v===textEdit.align));
+  renderSwatches(document.getElementById('t_color'),TEXT_COLORS,textEdit.color,v=>textEdit.color=v);
+  renderSwatches(document.getElementById('t_bg'),TEXT_BGS,textEdit.bg,v=>textEdit.bg=v);
+  renderSwatches(document.getElementById('t_border'),TEXT_BORDERS,textEdit.border,v=>textEdit.border=v);
+  document.getElementById('textDrawer').classList.add('open');
+}
+function closeTextEditor(){document.getElementById('textDrawer').classList.remove('open')}
+function deleteTextbox(id){
+  if(!confirm('确定删除这个文本框？'))return;
+  state.textboxes=state.textboxes.filter(x=>x.id!==id);
+  save();render();toast('已删除文本框');
+}
+document.getElementById('addText').onclick=()=>{
+  const canvas=document.getElementById('canvas'),z=zoom();
+  // 放在当前视口中央对应的画布逻辑坐标，用户点按钮后立即能看到
+  const cr=canvas.getBoundingClientRect();
+  const x=Math.round(Math.max(20,(window.innerWidth/2-cr.left)/z-90));
+  const y=Math.round(Math.max(20,(window.innerHeight/2-cr.top)/z-30));
+  const tb={id:uid(),text:'双击编辑文本内容',x:x,y:y,w:180,fontSize:14,color:'#e8eaf6',bg:'rgba(31,59,90,.92)',border:'#5c7cfa',borderW:2,radius:8,pad:8,opacity:100,align:'left',bold:false};
+  state.textboxes.push(tb);save();render();openTextEditor(tb.id);toast('已添加文本框');
+};
+document.getElementById('closeText').onclick=closeTextEditor;
+document.getElementById('cancelText').onclick=closeTextEditor;
+document.getElementById('textDelete').onclick=()=>{if(textEdit.id)deleteTextbox(textEdit.id);closeTextEditor()};
+document.querySelectorAll('#t_align button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#t_align button').forEach(x=>x.classList.remove('sel'));
+  b.classList.add('sel');textEdit.align=b.dataset.v;
+});
+function commitTextEdit(){
+  const tb=state.textboxes.find(x=>x.id===textEdit.id);if(!tb)return false;
+  tb.text=document.getElementById('t_text').value;
+  tb.fontSize=clamp(parseInt(document.getElementById('t_fontSize').value)||14,10,72);
+  tb.w=clamp(parseInt(document.getElementById('t_width').value)||180,60,800);
+  tb.bold=document.getElementById('t_bold').checked;
+  tb.radius=clamp(parseInt(document.getElementById('t_radius').value)||0,0,30);
+  tb.pad=clamp(parseInt(document.getElementById('t_pad').value)||0,0,40);
+  tb.opacity=clamp(parseInt(document.getElementById('t_opacity').value)||100,10,100);
+  tb.borderW=parseInt(document.getElementById('t_borderW').value)||0;
+  tb.align=textEdit.align;tb.color=textEdit.color;tb.bg=textEdit.bg;tb.border=textEdit.border;
+  save();render();closeTextEditor();toast('文本框已保存');
+  return true;
+}
+document.getElementById('saveText').onclick=commitTextEdit;
+
+document.getElementById('linkMode').onclick=()=>toggleLinkMode();
+document.getElementById('undoBtn').onclick=undo;
+document.getElementById('redoBtn').onclick=redo;
+
+// ===== 全局键盘快捷键 =====
+function isTyping(t){return t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable)}
+document.addEventListener('keydown',e=>{
+  const mod=e.ctrlKey||e.metaKey;
+  // 撤销 / 重做（输入框内交给浏览器原生的文本撤销）
+  if(mod&&e.key.toLowerCase()==='z'&&!isTyping(e.target)){e.preventDefault();e.shiftKey?redo():undo();return}
+  if(mod&&e.key.toLowerCase()==='y'&&!isTyping(e.target)){e.preventDefault();redo();return}
+  if(mod&&e.key.toLowerCase()==='s'){e.preventDefault();persist();if(typeof TS!=='undefined')TS.flush(true);return}
+  if(mod&&e.key.toLowerCase()==='a'&&!isTyping(e.target)){
+    e.preventDefault();rackSel=new Set(state.racks.map(r=>r.id));render();toast('已全选 '+rackSel.size+' 个机柜');return;
+  }
+  if(e.key==='Escape'){
+    if(linkMode||pendingPort){toggleLinkMode(false);toast('已取消连接');return}
+    const open=document.querySelector('.drawer.open');
+    if(open){open.classList.remove('open');return}
+    if(rackSel.size||selWire){rackSel.clear();selWire=null;render()}
+    return;
+  }
+  if(isTyping(e.target))return;
+  // Delete / Backspace：删除当前选中的连线
+  if((e.key==='Delete'||e.key==='Backspace')&&selWire){
+    e.preventDefault();
+    state.wires=(state.wires||[]).filter(w=>w.id!==selWire);selWire=null;save();render();toast('连接已删除');return;
+  }
+  // 方向键：微调选中机柜位置（Shift 加速 10px）
+  if(rackSel.size&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){
+    e.preventDefault();const step=e.shiftKey?10:1;
+    const dx=e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0;
+    const dy=e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0;
+    selectedRacks().forEach(r=>{r.pos.x=Math.max(0,r.pos.x+dx);r.pos.y=Math.max(0,r.pos.y+dy)});
+    fitCanvas();render();return;
+  }
+});
+document.getElementById('wireListBtn').onclick=()=>{
+  const body=document.getElementById('wireListBody');
+  if(!(state.wires||[]).length){body.innerHTML='<div class="tip">暂无连接。直接点击一个端口，再点击另一个端口即可创建连接。</div>'}
+  else{
+    const dashName={solid:'实线',dashed:'虚线',dotted:'点线',dashdot:'点划线'};
+    const arrowName={none:'无',end:'→',start:'←',both:'↔'};
+    body.innerHTML=state.wires.map(w=>'<div class="wire-item" data-wid="'+w.id+'" style="border:1px solid #e3e8ee;border-radius:8px;padding:10px;margin-bottom:8px;cursor:pointer">'
+      +'<div style="display:flex;align-items:center;gap:6px"><span style="width:20px;height:3px;background:'+w.color+'"></span><b style="font-size:12px;color:#1f3b5a">'+(esc(w.name)||'未命名连接')+'</b></div>'
+      +'<div style="font-size:10px;color:#607d8b;margin-top:5px">'+esc(portLabel(w.from))+' → '+esc(portLabel(w.to))+'</div>'
+      +'<div style="font-size:10px;color:#90a4ae;margin-top:3px">'+(dashName[w.dash]||w.dash)+' · '+(arrowName[w.arrow]||'')+' · '+(w.width||2)+'px</div></div>').join('');
+    body.querySelectorAll('.wire-item').forEach(it=>it.onclick=()=>{document.getElementById('wireListDrawer').classList.remove('open');selWire=it.dataset.wid;renderWires();openWireEditor(it.dataset.wid)});
+  }
+  document.getElementById('wireListDrawer').classList.add('open');
+};
+document.getElementById('closeWireList').onclick=()=>document.getElementById('wireListDrawer').classList.remove('open');
+document.getElementById('closeWireList2').onclick=()=>document.getElementById('wireListDrawer').classList.remove('open');
+
+document.getElementById('roomName').addEventListener('change',e=>{
+  state.roomName=e.target.value.trim()||'第一机房';e.target.value=state.roomName;save();render();toast('机房名称已更新');
+});
+document.getElementById('roomName').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur()});
+document.getElementById('rackCode').addEventListener('change',e=>{
+  const v=e.target.value.trim();if(!v){e.target.value=currentRack().name;return}
+  currentRack().name=v;e.target.value=v;save();render();toast('机柜编号已更新为 '+v);
+});
+document.getElementById('rackCode').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur()});
+document.getElementById('selAll').onclick=()=>{
+  if(rackSel.size>0&&rackSel.size===state.racks.length)rackSel.clear();
+  else state.racks.forEach(r=>rackSel.add(r.id));
+  render();toast(rackSel.size?('已选中 '+rackSel.size+' 个机柜'):'已取消全选');
+};
+document.querySelectorAll('.alignbar button[data-align]').forEach(b=>b.onclick=()=>alignRacks(b.dataset.align));
+document.getElementById('themeSel').onchange=e=>{state.theme=e.target.value;save();render()};
+document.getElementById('rackSelect').onchange=e=>{state.focus=e.target.value;save();render()};
+document.getElementById('addRack').onclick=()=>{
+  const n=nextRackName();
+  const pos={x:24+((state.racks.length)%4)*272,y:64+Math.floor(state.racks.length/4)*760};
+  state.racks.push({id:uid(),name:n,totalU:state.size.totalU,devices:[],pos});state.focus=state.racks[state.racks.length-1].id;
+  rackSel.clear();rackSel.add(state.focus);
+  save();render();toast('已添加 '+n);
+};
+document.getElementById('copyRack').onclick=()=>{
+  const src=currentRack(),n=nextRackName(),cp=JSON.parse(JSON.stringify(src));
+  cp.id=uid();cp.name=n;cp.devices.forEach(d=>{d.id=uid();(d.ports||[]).forEach(p=>p.id=uid())});
+  cp.pos={x:src.pos.x+306,y:src.pos.y};
+  state.racks.push(cp);state.focus=cp.id;rackSel.clear();rackSel.add(cp.id);
+  save();render();toast('已复制为 '+n);
+};
+document.getElementById('addDev').onclick=()=>openEditor(currentRack().id,null,1);
+document.getElementById('resetBtn').onclick=()=>{if(confirm('确定重置为照片初始布局？当前编辑将丢失。')){state=defaultData();rackSel.clear();rackSel.add(state.focus);save();render();toast('已重置')}};
+document.getElementById('printBtn').onclick=()=>window.print();
+document.getElementById('exportJson').onclick=()=>{
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='机柜图.json';a.click();URL.revokeObjectURL(a.href);toast('已导出JSON');
+};
+document.getElementById('importJson').onclick=()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();rd.onload=()=>{try{const d=JSON.parse(rd.result);if(d.racks&&Array.isArray(d.racks)){state=d;state.roomPos=state.roomPos||{x:24,y:16};state.uOrder=state.uOrder||'desc';if(!state.size||typeof state.size!=='object')state.size={width:250,unitH:17,totalU:42};if(!state.size.width)state.size.width=250;if(!state.size.unitH)state.size.unitH=17;if(!state.size.totalU)state.size.totalU=42;if(!state.zoom)state.zoom=1;state.racks.forEach((r,i)=>{if(!r.pos)r.pos={x:24+i*306,y:64};if(!r.totalU)r.totalU=state.size.totalU;r.devices.forEach(d=>{if(!d.ports)d.ports=[];d.ports.forEach(p=>{if(!p.side)p.side='right'})})});state.wires=state.wires||[];state.textboxes=state.textboxes||[];state.focus=state.focus||state.racks[0].id;rackSel.clear();rackSel.add(state.focus);save();render();toast('导入成功')}else toast('格式不正确')}catch(err){toast('JSON解析失败')}};rd.readAsText(f);
+};
+function baseName(){return (state.roomName||'机房')+'_机柜图'}
+function download(blob,filename){
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+
+// Excel：每个机柜一个工作表，逐U列出占用设备
+function exportExcel(){
+  if(typeof XLSX==='undefined'){toast('Excel库未加载，请联网后重试');return}
+  const wb=XLSX.utils.book_new();
+  state.racks.forEach(rack=>{
+    const rows=[['U位','设备名称','型号','类型','高度(U)','起始U','结束U','状态','颜色','备注']];
+    const typeName={server:'服务器',network:'网络设备',storage:'存储',security:'安全设备',pdu:'PDU/电源',blank:'空白挡板',other:'其他'};
+    const statusName={normal:'正常',warning:'告警',error:'故障',offline:'离线'};
+    uSeq(rack).forEach(u=>{
+      const d=rack.devices.find(x=>u>=x.startU&&u<x.startU+x.sizeU);
+      if(d)rows.push([u,d.name,d.model,typeName[d.type]||d.type,d.sizeU,d.startU,d.startU+d.sizeU-1,statusName[d.status]||d.status,d.color,d.note||'']);
+      else rows.push([u,'空闲','','','','','','','','']);
+    });
+    const ws=XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols']=[{wch:6},{wch:22},{wch:20},{wch:12},{wch:9},{wch:8},{wch:8},{wch:8},{wch:12},{wch:30}];
+    let name=rack.name.replace(/[\\/?*\[\]:]/g,'_').slice(0,31)||'Sheet';
+    XLSX.utils.book_append_sheet(wb,ws,name);
+  });
+  // 连接表
+  const dashName={solid:'实线',dashed:'虚线',dotted:'点线',dashdot:'点划线'};
+  const arrowName={none:'无',end:'终点',start:'起点',both:'双向'};
+  const crows=[['连接名称','起点','终点','颜色','线宽','线型','箭头','形状']];
+  (state.wires||[]).forEach(w=>crows.push([w.name||'',portLabel(w.from),portLabel(w.to),w.color,w.width,dashName[w.dash]||w.dash,arrowName[w.arrow]||w.arrow,w.shape||'ortho']));
+  const cws=XLSX.utils.aoa_to_sheet(crows);
+  cws['!cols']=[{wch:18},{wch:32},{wch:32},{wch:10},{wch:8},{wch:10},{wch:8},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,cws,'连接');
+  const out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+  download(new Blob([out],{type:'application/octet-stream'}),baseName()+'.xlsx');
+  toast('已导出 Excel（'+(state.racks.length+1)+'个工作表）');
+}
+
+function exportImageOrPdf(fmt){
+  if(typeof html2canvas==='undefined'){toast('截图库未加载，请用“打印”另存PDF');return}
+  toast(fmt==='pdf'?'正在生成 PDF...':'正在生成图片...');
+  // 导出按逻辑尺寸(100%)截取，避免屏幕缩放导致图片变形或尺寸漂移
+  const ea=document.getElementById('exportArea');
+  const prev=ea.style.transform;
+  ea.style.transform='none';
+  html2canvas(ea,{backgroundColor:state.theme==='dark'?'#e8ebef':'#eef1f5',scale:2,width:document.getElementById('canvas').offsetWidth,height:document.getElementById('canvas').offsetHeight,onclone:doc=>doc.querySelectorAll('.wire-handle,.tb-bar').forEach(el=>el.style.display='none')}).then(c=>{
+    if(fmt==='png'){
+      downloadBlobUrl(c.toDataURL('image/png'),baseName()+'.png');toast('已导出图片');
+    }else if(fmt==='pdf'){
+      if(typeof jspdf==='undefined'||!jspdf.jsPDF){toast('PDF库未加载，请用“打印”另存PDF');return}
+      const img=c.toDataURL('image/png');
+      const pdf=new jspdf.jsPDF({orientation:'portrait',unit:'px',format:[c.width,c.height]});
+      pdf.addImage(img,'PNG',0,0,c.width,c.height);
+      pdf.save(baseName()+'.pdf');toast('已导出 PDF');
+    }
+  }).catch(()=>toast('生成失败，请用“打印”另存PDF'))
+   .finally(()=>{ea.style.transform=prev||''});
+}
+function downloadBlobUrl(url,filename){
+  const a=document.createElement('a');a.href=url;a.download=filename;a.click();
+}
+document.getElementById('exportBtn').onclick=()=>{
+  const fmt=document.getElementById('exportFmt').value;
+  if(fmt==='xlsx')exportExcel();else exportImageOrPdf(fmt);
+};
+
+rackSel.add(currentRack().id);
+_history=[snapshot()];_hIdx=0;   // 初始状态作为历史起点
+updateHistBtns();
+render();
+
+/**
+ * 供云端同步层调用：把远端 data 落到编辑器状态并重建视图。
+ * 统一走 window.TSEditor 这层接口，避免跨 <script> 直接读写 state 这类 let 绑定。
+ */
+function applyRemoteState(obj){
+  if(!obj||!Array.isArray(obj.racks)||!obj.racks.length){
+    obj=obj||{};
+    obj.racks=[{id:'A-01',name:'A-01',totalU:42,pos:{x:24,y:64},devices:[]}];
+    obj.focus='A-01';
+    if(!obj.wires)obj.wires=[];
+    if(!obj.textboxes)obj.textboxes=[];
+  }
+  state=obj;
+  migrateState();
+  if(!state.focus||!state.racks.some(function(r){return r.id===state.focus})){
+    state.focus=state.racks[0].id;
+  }
+  rackSel.clear();rackSel.add(state.focus);
+  _history=[snapshot()];_hIdx=0;
+  updateHistBtns();
+  render();
+}
+window.TSEditor={applyState:applyRemoteState,getSnapshot:snapshot};
+
+// 云端接管：首屏先用本地缓存渲染（已在上方完成），等 DOM 就绪的下一拍再拉服务端最新版本，
+// 既不阻塞首屏，也避免在脚本解析期间启动异步链。
+if(document.readyState==='loading'){
+  document.addEventListener('DOMContentLoaded',function(){TS.boot()});
+}else{
+  setTimeout(function(){TS.boot()},0);
+}
+</script>
+</body>
+</html>
