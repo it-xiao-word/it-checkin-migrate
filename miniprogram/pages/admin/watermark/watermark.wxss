@@ -1,0 +1,107 @@
+.page { padding: 24rpx 24rpx 0; }
+
+.tip {
+  padding: 0 8rpx 20rpx;
+  line-height: 1.6;
+  font-size: 23rpx;
+}
+
+.tpl {
+  background: #ffffff;
+  border-radius: 16rpx;
+  margin-bottom: 14rpx;
+  box-shadow: 0 2rpx 10rpx rgba(31, 59, 90, 0.05);
+  overflow: hidden;
+}
+.tpl-main {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 24rpx 26rpx 20rpx;
+}
+.swatch {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 14rpx;
+  flex-shrink: 0;
+}
+.tpl-n { font-size: 29rpx; font-weight: 600; color: #1f2329; }
+.tpl-s { font-size: 23rpx; color: #8a94a6; margin-top: 6rpx; }
+.arrow { font-size: 40rpx; color: #c3cbd6; line-height: 1; }
+
+.tpl-ops {
+  display: flex;
+  gap: 28rpx;
+  padding: 0 26rpx 22rpx;
+  justify-content: flex-end;
+}
+.op { font-size: 24rpx; color: #5a7fa8; }
+.op-del { color: #C0392B; }
+
+.bottom-pad { height: 180rpx; }
+.bottom {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -2rpx 16rpx rgba(31, 59, 90, 0.08);
+}
+
+/* 弹层 */
+.mask {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(15, 25, 40, 0.45);
+  z-index: 10;
+}
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 24rpx 24rpx 0 0;
+  z-index: 11;
+}
+.sheet-h {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1F3B5A;
+  text-align: center;
+  padding: 32rpx 0 12rpx;
+}
+.sheet-body {
+  padding: 16rpx 32rpx 0;
+  max-height: 62vh;
+}
+.sheet-actions {
+  display: flex;
+  gap: 16rpx;
+  padding: 20rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid #f2f5f9;
+}
+
+/* 颜色 */
+.colors { display: flex; gap: 20rpx; }
+.color {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 16rpx;
+  border: 4rpx solid transparent;
+}
+.color.on {
+  border-color: #1F3B5A;
+  box-shadow: 0 0 0 4rpx rgba(31, 59, 90, 0.15);
+}
+
+/* 开关行 */
+.sw-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14rpx 0;
+  border-top: 1rpx solid #f2f5f9;
+}
+.sw-row:first-of-type { border-top: none; }
+.sw-t { font-size: 27rpx; color: #2b3444; }
