@@ -1,0 +1,54 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/login/login",
+    "pages/checkin/checkin",
+    "pages/records/records",
+    "pages/profile/profile",
+    "pages/detail/detail",
+    "pages/change-password/change-password",
+    "pages/admin/home/home",
+    "pages/admin/records/records",
+    "pages/admin/config/config",
+    "pages/admin/watermark/watermark",
+    "pages/admin/users/users"
+  ],
+  "window": {
+    "navigationBarTitleText": "IT机房巡检打卡",
+    "navigationBarBackgroundColor": "#1F3B5A",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f2f5f9",
+    "backgroundTextStyle": "light"
+  },
+  "tabBar": {
+    "color": "#8a94a6",
+    "selectedColor": "#1F3B5A",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/checkin/checkin",
+        "text": "打卡"
+      },
+      {
+        "pagePath": "pages/records/records",
+        "text": "记录"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于在机房巡检打卡时记录现场位置，仅在打卡过程中获取"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ],
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}
