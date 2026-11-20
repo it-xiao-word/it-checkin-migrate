@@ -1,0 +1,57 @@
+<view class="page">
+
+  <view wx:if="{{state === 'loading'}}" class="state">
+    <view class="spinner"></view>
+    <view class="state-t">正在加载…</view>
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="state">
+    <view class="state-t">{{errMsg || '记录加载失败'}}</view>
+    <button class="btn btn-ghost btn-sm" bindtap="load">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <!-- 现场照片 -->
+    <image class="photo" src="{{photoUrl}}" mode="widthFix" bindtap="preview" wx:if="{{photoUrl}}" />
+    <view class="photo-empty" wx:else>该记录没有现场照片</view>
+
+    <!-- 基本信息 -->
+    <view class="card">
+      <view class="row between head">
+        <view class="t32 strong c-primary ellipsis">{{row.location}}</view>
+        <text class="tag {{row.bad ? 'tag-bad' : 'tag-ok'}}">{{row.bad ? '有异常' : '全部正常'}}</text>
+      </view>
+
+      <view class="kv"><text class="k">打卡时间</text><text class="v">{{row.timeText}}</text></view>
+      <view class="kv"><text class="k">巡检人</text><text class="v">{{row.nameText}}</text></view>
+      <view class="kv" wx:if="{{row.coord}}"><text class="k">坐标</text><text class="v mono small">{{row.coord}}</text></view>
+      <view class="kv" wx:if="{{row.wmTemplate}}"><text class="k">水印样式</text><text class="v">{{row.wmTemplate}}</text></view>
+      <view class="kv" wx:if="{{row.photoSize}}"><text class="k">照片体积</text><text class="v">{{row.photoSize}}</text></view>
+      <view class="kv"><text class="k">记录编号</text><text class="v mono small">#{{row.id}}</text></view>
+    </view>
+
+    <!-- 巡检明细 -->
+    <view class="card" wx:if="{{insp.length > 0}}">
+      <view class="card-h"><text>巡检明细</text></view>
+      <view class="insp-row" wx:for="{{insp}}" wx:key="name">
+        <text class="grow insp-n">{{item.name}}</text>
+        <text class="tag {{item.status === 'bad' ? 'tag-bad' : 'tag-ok'}}">{{item.text}}</text>
+      </view>
+    </view>
+
+    <!-- 说明 -->
+    <view class="card" wx:if="{{row.customText}}">
+      <view class="card-h"><text>巡检说明</text></view>
+      <view class="note">{{row.customText}}</view>
+    </view>
+
+    <view class="card" wx:if="{{row.note}}">
+      <view class="card-h"><text>备注</text></view>
+      <view class="note">{{row.note}}</view>
+    </view>
+
+    <button class="btn btn-danger btn-block del" bindtap="remove">删除这条记录</button>
+    <view class="foot"></view>
+  </block>
+
+</view>
