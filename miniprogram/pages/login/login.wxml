@@ -1,0 +1,34 @@
+<view class="login">
+  <view class="brand">
+    <view class="logo">IT</view>
+    <view class="t36 strong c-primary">机房巡检打卡</view>
+    <view class="muted brand-sub">请使用管理员分配的账号登录</view>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <view class="field-l">账号</view>
+      <input class="input" placeholder="登录账号" placeholder-class="ph"
+             value="{{username}}" bindinput="onUser" confirm-type="next" />
+    </view>
+
+    <view class="field">
+      <view class="field-l">密码</view>
+      <input class="input" password="{{true}}" placeholder="登录密码" placeholder-class="ph"
+             value="{{password}}" bindinput="onPass" confirm-type="done" bindconfirm="submit" />
+    </view>
+
+    <view class="err" wx:if="{{err}}">{{err}}</view>
+
+    <button class="btn btn-primary btn-block" bindtap="submit"
+            loading="{{loading}}" disabled="{{loading}}">
+      {{loading ? '登录中…' : '登 录'}}
+    </button>
+
+    <view class="tip muted">
+      首次登录需修改初始密码；照片在提交前自动压缩，不影响清晰度。
+    </view>
+  </view>
+
+  <view class="foot muted">IT 机房运维 · 现场巡检留痕</view>
+</view>
