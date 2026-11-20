@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IT 机房打卡服务 · 通用迁移部署包</title>
+<style>
+  :root { --ink:#1f2933; --sub:#5b6b7b; --line:#e3e9ef; --bg:#f6f8fa; --card:#fff; --blue:#1f6feb; --green:#1a7f37; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif; color:var(--ink); background:var(--bg); line-height:1.7; }
+  .wrap { max-width:900px; margin:0 auto; padding:48px 20px 80px; }
+  .badge { display:inline-block; background:#ddf4ff; color:#0969da; border:1px solid #b6e3ff; border-radius:20px; padding:3px 12px; font-size:13px; margin-bottom:16px; }
+  h1 { font-size:30px; margin:0 0 10px; }
+  .lead { color:var(--sub); font-size:17px; margin:0 0 32px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:24px 28px; margin-bottom:18px; }
+  h2 { font-size:19px; margin:0 0 14px; padding-bottom:10px; border-bottom:1px solid var(--line); }
+  ul { margin:0; padding-left:22px; }
+  li { margin:6px 0; }
+  code { background:#eff2f5; border-radius:5px; padding:2px 6px; font-family:ui-monospace,Consolas,monospace; font-size:14px; }
+  pre { background:#0d1117; color:#e6edf3; border-radius:8px; padding:16px 18px; overflow:auto; font-size:13px; }
+  pre code { background:none; color:inherit; padding:0; }
+  .btn { display:inline-block; background:var(--blue); color:#fff !important; text-decoration:none; padding:10px 18px; border-radius:6px; font-weight:600; margin:6px 8px 6px 0; }
+  .btn.ghost { background:#fff; color:var(--blue) !important; border:1px solid var(--blue); }
+  .note { background:#fff8c5; border-left:4px solid #d4a72c; padding:12px 16px; border-radius:0 6px 6px 0; margin-top:14px; font-size:14px; }
+  a { color:var(--blue); }
+  footer { color:var(--sub); font-size:13px; text-align:center; margin-top:36px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <span class="badge">公开 · 通用迁移版 v1.0.0</span>
+  <h1>IT 机房运维 · 现场打卡服务</h1>
+  <p class="lead">移动端 H5 + Node/SQLite 轻量后端，内置机柜连线拓扑编辑器，附微信小程序源码。任意机器、任意目录可部署。</p>
+
+  <div class="card">
+    <h2>快速开始</h2>
+    <pre><code>tar xzf it-checkin-migrate.tar.gz
+cd it-checkin
+sudo bash install.sh</code></pre>
+    <p>脚本自动完成：目录定位 → <code>npm ci</code> → 可选自签 HTTPS → 可选 systemd 开机自启 → 健康检查。</p>
+    <div class="note">首次启动会随机生成管理员密码并写入 <code>data/first_password.txt</code>（权限 600），首次登录强制改密，改密后请删除该文件。</div>
+  </div>
+
+  <div class="card">
+    <h2>下载与文档</h2>
+    <a class="btn" href="https://github.com/it-xiao-word/it-checkin-migrate/releases/download/v1.0.0/it-checkin-migrate.tar.gz">下载迁移包（Release）</a>
+    <a class="btn ghost" href="https://github.com/it-xiao-word/it-checkin-migrate/blob/main/README.md">完整部署文档 README</a>
+    <a class="btn ghost" href="https://github.com/it-xiao-word/it-checkin-migrate">GitHub 仓库</a>
+  </div>
+
+  <div class="card">
+    <h2>包内包含</h2>
+    <ul>
+      <li>后端：<code>server.js</code>、<code>db.js</code>、XLSX/HTML 导出模块</li>
+      <li>Web 前端 <code>public/</code>：打卡、记录、管理、机柜拓扑（含离线依赖）</li>
+      <li>小程序 <code>miniprogram/</code>：与 Web 共用同一后端</li>
+      <li>部署：<code>install.sh</code> 一键脚本 + 10 章中文 README</li>
+    </ul>
+    <p style="margin-top:14px">不含真实数据、密钥、证书与固定密码；<code>data/</code>、<code>uploads/</code> 首次运行自动创建。</p>
+  </div>
+
+  <div class="card">
+    <h2>迁移旧数据</h2>
+    <p>把旧服务器的 <code>data/</code> 与 <code>uploads/</code> 覆盖到新目录后重启，账号、记录、照片、拓扑、水印全部保留。</p>
+    <pre><code>sudo systemctl stop it-checkin
+tar xzf itck-data.tar.gz -C /opt/it-checkin
+sudo systemctl start it-checkin</code></pre>
+  </div>
+
+  <footer>仅供个人与内部运维使用 · 部署后请立即修改管理员密码并妥善备份 data/ 与 uploads/</footer>
+</div>
+</body>
+</html>
