@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1F3B5A" />
+  <title>机房打卡 · 管理端</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .admin main { max-width: 1000px; }
+    .admin .seg-tabs { top: 56px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .filters .field { margin: 0; }
+    .filters input { min-width: 116px; }
+    .mon { border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 10px; font-size: 13.5px; background: #fff; color: var(--text); font-family: inherit; }
+    .mon:focus { outline: none; border-color: var(--blue-3); box-shadow: 0 0 0 3px rgba(58, 103, 150, .1); }
+    .cfg-add { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+    .cfg-input {
+      flex: 1 1 130px; min-width: 0;
+      border: 1px solid var(--line); border-radius: 10px;
+      padding: 9px 12px; font-size: 13.5px; background: #f8fafc;
+      font-family: inherit; color: var(--text);
+      transition: border-color .15s, background .15s, box-shadow .15s;
+    }
+    .cfg-input:focus { border-color: var(--blue-3); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(58, 103, 150, .1); }
+    .cfg-btn { flex: 0 0 auto; width: auto !important; margin-top: 0; padding: 9px 20px; background: var(--grad); color: #fff; font-size: 13.5px; }
+    .cfg-tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+    .cfg-tbl { width: 100%; font-size: 13px; border-collapse: collapse; background: #fff; }
+    .cfg-tbl th, .cfg-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+    .cfg-tbl th { background: #f4f7fb; color: var(--blue); font-weight: 600; font-size: 12.5px; position: static; }
+    .cfg-tbl tbody tr:last-child td { border-bottom: none; }
+    .cfg-tbl tbody tr:hover { background: #fafbfd; }
+    .cfg-tbl .op { width: 120px; text-align: center; }
+    .cfg-tbl select { border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 12.5px; background: #f8fafc; font-family: inherit; color: var(--text); }
+    .linkbtn {
+      color: var(--blue-2); cursor: pointer; border: none; background: none;
+      font-size: 12.5px; padding: 2px 6px; font-family: inherit;
+    }
+    .linkbtn:hover { text-decoration: underline; }
+    .linkbtn.danger { color: var(--red-2); }
+    .tag.admin { background: var(--blue); color: #fff; }
+    .tag.user { background: #eef2f7; color: var(--blue); }
+    .tag.must { background: #fdecea; color: var(--red-2); }
+    /* 巡检模板卡片 */
+    .tpl-list { display: flex; flex-direction: column; gap: 10px; }
+    .tpl-card { border: 1px solid var(--line); border-radius: 12px; padding: 11px 13px; background: #fff; }
+    .tpl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 9px; }
+    .tpl-name { font-size: 13.5px; font-weight: 650; color: var(--blue); }
+    .tpl-desc { font-size: 11.5px; color: var(--muted); flex: 1 1 100px; }
+    .tpl-use { font-size: 11.5px; color: var(--blue-2); background: var(--blue-soft); border-radius: 999px; padding: 2px 9px; }
+    .tpl-items { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 2px;
+      background: var(--blue-soft); color: var(--blue);
+      border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 12.5px;
+    }
+    .chip-del { border: none; background: none; color: var(--red-2); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 3px; }
+    .chip-input { border: 1px dashed var(--line-2); border-radius: 999px; padding: 5px 11px; font-size: 12.5px; width: 150px; background: #f8fafc; font-family: inherit; color: var(--text); }
+    .chip-input:focus { border-color: var(--blue-3); background: #fff; outline: none; }
+    .chip-add { border: none; background: var(--blue); color: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit; }
+    .chip-add:hover { background: var(--blue-2); }
+    .tpl-empty { font-size: 12.5px; color: var(--muted); padding: 10px 2px; }
+    .cfg-tip { font-size: 12px; color: var(--muted); margin: 0 0 12px; line-height: 1.6; }
+    .cfg-sep { height: 1px; background: var(--line); margin: 12px 0; }
+  </style>
+</head>
+<body class="admin">
+  <header class="topbar">
+    <div class="topbar-main">
+      <div class="brand">机房打卡 · 管理端</div>
+      <div class="topbar-sub">配置 · 记录 · 导出</div>
+    </div>
+    <div class="top-actions">
+      <a href="/rack-topology.html" class="top-link" title="查看机柜连线拓扑">▤ 机柜拓扑</a>
+      <button id="logoutBtn" class="topbtn" type="button">退出登录</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="stats">
+      <div class="stat"><div class="k">今日打卡</div><div class="v" id="sToday">—<span class="u">次</span></div></div>
+      <div class="stat bad"><div class="k">今日异常</div><div class="v" id="sTodayBad">—<span class="u">次</span></div></div>
+      <div class="stat"><div class="k">本月打卡</div><div class="v" id="sMonth">—<span class="u">次</span></div></div>
+      <div class="stat bad"><div class="k">本月异常</div><div class="v" id="sMonthBad">—<span class="u">次</span></div></div>
+    </div>
+
+    <div class="seg-tabs" id="tabs">
+      <button class="on" type="button" data-tab="rec">打卡记录</button>
+      <button type="button" data-tab="cfg">系统配置</button>
+    </div>
+
+    <!-- ============ 打卡记录 ============ -->
+    <div class="panel on" id="panel-rec">
+      <section class="card chart-card">
+        <div class="chart-head">
+          <span class="chart-title">近 7 日打卡强度</span>
+          <span class="chart-hint">柱高为当日次数，红色段为异常</span>
+        </div>
+        <div id="trend" class="spark-wrap">
+          <div class="spark skel" style="height:96px;"></div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="filter-grid">
+          <label class="field fg-wide"><span>关键字</span><input id="fKw" type="text" placeholder="姓名 / 机房 / 巡检说明 / 备注，模糊匹配" autocomplete="off" /></label>
+          <label class="field"><span>开始日期</span><input id="fFrom" type="date" /></label>
+          <label class="field"><span>结束日期</span><input id="fTo" type="date" /></label>
+        </div>
+        <div class="filter-actions">
+          <label class="chk"><input id="fBad" type="checkbox" /> 只看异常</label>
+          <div class="btns">
+            <button class="btn ghost sm" id="searchBtn" type="button">查询</button>
+            <button class="btn ghost sm" id="resetBtn" type="button">重置</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="bar">
+        <span id="count" class="muted" style="font-size:12.5px;">共 0 条</span>
+        <div class="bar-actions">
+          <button class="btn ghost sm" id="exportBtn" type="button">📤 导出（可选周期）</button>
+          <input type="month" id="sumMonth" class="mon" />
+          <button class="btn ghost sm" id="sumBtn" type="button">📊 月度汇总</button>
+        </div>
+      </div>
+
+      <section class="card flush" style="overflow:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>时间</th><th>姓名</th><th>机房/位置</th><th>巡检结果</th>
+              <th>巡检说明</th><th>照片</th><th class="op">操作</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </section>
+
+      <div class="pager">
+        <button class="btn ghost sm" id="prev" type="button">上一页</button>
+        <span id="pageInfo">1 / 1</span>
+        <button class="btn ghost sm" id="next" type="button">下一页</button>
+      </div>
+    </div>
+
+    <!-- ============ 系统配置 ============ -->
+    <div class="panel" id="panel-cfg">
+      <div class="acc open">
+        <div class="acc-head">
+          <span class="ico">👤</span><span class="t">用户管理</span>
+          <span class="n" id="userCnt">—</span><span class="caret">▾</span>
+        </div>
+        <div class="acc-body">
+          <p class="cfg-tip">在这里创建打卡账号。密码留空则自动生成一次，需转交用户；新账号首次登录必须改密。</p>
+          <div class="cfg-add">
+            <input id="uName" class="cfg-input" type="text" placeholder="登录账号 *" />
+            <input id="uDisp" class="cfg-input" type="text" placeholder="姓名（选填）" />
+            <input id="uStaff" class="cfg-input" type="text" placeholder="工号（选填）" />
+            <select id="uRole" class="cfg-input" style="flex:0 0 118px;">
+              <option value="user">普通用户</option>
+              <option value="admin">管理员</option>
+            </select>
+            <input id="uPw" class="cfg-input" type="text" placeholder="初始密码（留空自动生成）" />
+            <button class="btn cfg-btn" id="addUser" type="button">添加用户</button>
+          </div>
+          <div class="cfg-tbl-wrap">
+            <table class="cfg-tbl">
+              <thead><tr><th>账号</th><th>姓名</th><th>工号</th><th>角色</th><th>状态</th><th class="op">操作</th></tr></thead>
+              <tbody id="userBody"></tbody>
+            </table>
+          </div>
+          <div class="cfg-sep"></div>
+          <div class="cfg-add" style="margin-bottom:0;">
+            <button class="btn ghost sm" id="resetAll" type="button">重置全部普通用户密码</button>
+            <span class="muted" style="font-size:11.5px;align-self:center;">重置后用户下次登录需改密</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="acc">
+        <div class="acc-head">
+          <span class="ico">🧾</span><span class="t">巡检模板</span>
+          <span class="n" id="tplCnt">—</span><span class="caret">▾</span>
+        </div>
+        <div class="acc-body">
+          <p class="cfg-tip">一个模板就是一套巡检项目。机房先归入分组，分组绑定模板，同组机房共用同一套巡检项目。</p>
+          <div class="cfg-add">
+            <input id="tplName" class="cfg-input" type="text" placeholder="模板名称，如：核心机房标准巡检" />
+            <input id="tplDesc" class="cfg-input" type="text" placeholder="说明（选填）" />
+            <button class="btn cfg-btn" id="addTpl" type="button">添加模板</button>
+          </div>
+          <div id="tplList" class="tpl-list"></div>
+        </div>
+      </div>
+
+      <div class="acc">
+        <div class="acc-head">
+          <span class="ico">🗂️</span><span class="t">机房分组</span>
+          <span class="n" id="grpCnt">—</span><span class="caret">▾</span>
+        </div>
+        <div class="acc-body">
+          <p class="cfg-tip">分组用于把巡检项目「批量套用」到一批机房，避免逐台配置。</p>
+          <div class="cfg-add">
+            <input id="grpName" class="cfg-input" type="text" placeholder="分组名称，如：核心机房组" />
+            <select id="grpTpl" class="cfg-input" style="flex:0 0 200px;"></select>
+            <button class="btn cfg-btn" id="addGrp" type="button">添加分组</button>
+          </div>
+          <div class="cfg-tbl-wrap">
+            <table class="cfg-tbl">
+              <thead><tr><th>分组</th><th>巡检模板</th><th>机房数</th><th class="op">操作</th></tr></thead>
+              <tbody id="grpBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="acc">
+        <div class="acc-head">
+          <span class="ico">🏢</span><span class="t">机房管理</span>
+          <span class="n" id="roomCnt">—</span><span class="caret">▾</span>
+        </div>
+        <div class="acc-body">
+          <p class="cfg-tip">机房即打卡页「机房 / 位置」下拉项。选择分组后自动继承该组的巡检项目。</p>
+          <div class="cfg-add">
+            <input id="roomName" class="cfg-input" type="text" placeholder="机房 / 位置名称" />
+            <select id="roomGrp" class="cfg-input" style="flex:0 0 200px;"></select>
+            <button class="btn cfg-btn" id="addRoom" type="button">添加机房</button>
+          </div>
+          <div class="cfg-tbl-wrap">
+            <table class="cfg-tbl">
+              <thead><tr><th>机房 / 位置</th><th>所属分组</th><th>巡检项目</th><th class="op">操作</th></tr></thead>
+              <tbody id="roomBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="acc">
+        <div class="acc-head">
+          <span class="ico">🎨</span><span class="t">水印设置</span>
+          <span class="n" id="wmHead">—</span><span class="caret">▾</span>
+        </div>
+        <div class="acc-body">
+          <p class="cfg-tip">
+            可配置<b>多套水印模板</b>，打卡时可自由选择；带「默认」标记的那套会被默认选中。
+            每套模板可单独设置标题、副标题、主题色、显示字段与是否允许现场人员改标题。
+          </p>
+          <div class="wm-set">
+            <div class="wm-set-form">
+              <div class="wm-tpl-bar">
+                <label class="field">
+                  <span>选择要编辑的模板<span class="wm-cnt" id="wmTplCnt"></span></span>
+                  <select id="wmTplSel" class="cfg-input"></select>
+                </label>
+                <div class="wm-tpl-ops">
+                  <button class="btn ghost sm" id="wmTplNew" type="button">＋ 新建模板</button>
+                  <button class="btn ghost sm" id="wmTplDefault" type="button">设为默认</button>
+                  <button class="btn ghost sm" id="wmTplDel" type="button">删除模板</button>
+                </div>
+              </div>
+              <p class="wm-tpl-note" id="wmTplNote">—</p>
+
+              <label class="field">
+                <span>模板名称<span class="wm-cnt" id="setWmNameCnt">0/24</span></span>
+                <input id="setWmName" class="cfg-input" type="text" maxlength="24" placeholder="如：标准打卡水印" />
+              </label>
+              <label class="field">
+                <span>水印标题<span class="wm-cnt" id="setWmTitleCnt">0/20</span></span>
+                <input id="setWmTitle" class="cfg-input" type="text" maxlength="20" placeholder="IT机房运维 · 现场打卡" />
+              </label>
+              <label class="field">
+                <span>副标题 / 单位（选填）<span class="wm-cnt" id="setWmOrgCnt">0/24</span></span>
+                <input id="setWmOrg" class="cfg-input" type="text" maxlength="24" placeholder="如：浙大杭州国际科创中心 · 运维组" />
+              </label>
+              <div class="field">
+                <span>主题色</span>
+                <div class="wm-colors" id="wmColors"></div>
+              </div>
+              <div class="field">
+                <span>信息条显示字段</span>
+                <div class="wm-checks">
+                  <label class="chk"><input type="checkbox" id="wmShowTime" /> 时间</label>
+                  <label class="chk"><input type="checkbox" id="wmShowCoord" /> 坐标</label>
+                  <label class="chk"><input type="checkbox" id="wmShowStaff" /> 人员/工号</label>
+                  <label class="chk"><input type="checkbox" id="wmShowLocation" /> 机房位置</label>
+                  <label class="chk"><input type="checkbox" id="wmShowInspect" /> 巡检结论</label>
+                  <label class="chk"><input type="checkbox" id="wmShowCustom" /> 巡检说明</label>
+                  <label class="chk"><input type="checkbox" id="wmShowNote" /> 备注</label>
+                </div>
+              </div>
+              <label class="chk" style="padding-top:2px;">
+                <input type="checkbox" id="wmAllowCustom" /> 允许现场人员改标题（自定义水印）
+              </label>
+              <div class="cfg-add" style="margin-top:12px;margin-bottom:0;">
+                <button class="btn cfg-btn" id="saveWm" type="button">保存模板</button>
+                <button class="btn ghost sm" id="resetWm" type="button">恢复默认值</button>
+              </div>
+            </div>
+            <div class="wm-set-preview">
+              <canvas id="admWmPreview" width="480" height="300"></canvas>
+              <div class="wm-preview-cap">预览（示例数据，随设置实时变化）</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 记录详情 -->
+  <div class="modal-mask" id="detailMask">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="t">打卡详情</div>
+        <button class="modal-close" id="detailClose" type="button">×</button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="/js/auth.js"></script>
+  <script src="/js/watermark.js"></script>
+  <script src="/js/admin.js"></script>
+</body>
+</html>
