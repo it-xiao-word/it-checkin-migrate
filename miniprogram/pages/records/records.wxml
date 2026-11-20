@@ -1,0 +1,74 @@
+<view class="page">
+
+  <!-- 近 7 日趋势 -->
+  <view class="card">
+    <view class="card-h">
+      <text>近 7 日巡检</text>
+      <text class="h-sub">今日 {{today}} 次<text wx:if="{{todayBad > 0}}" class="c-bad"> · 异常 {{todayBad}}</text></text>
+    </view>
+    <view class="spark">
+      <view class="spark-col" wx:for="{{trend}}" wx:key="date">
+        <view class="spark-wrap">
+          <view class="spark-bar {{item.total === 0 ? 'zero' : ''}}" style="height:{{item.h}}%">
+            <view class="spark-bad" wx:if="{{item.badH > 0}}" style="height:{{item.badH}}%"></view>
+          </view>
+        </view>
+        <view class="spark-n">{{item.total}}</view>
+        <view class="spark-x {{item.isToday ? 'today' : ''}}">{{item.label}}</view>
+      </view>
+    </view>
+    <view class="spark-legend">
+      <text class="lg-item"><text class="lg-dot normal"></text>正常</text>
+      <text class="lg-item"><text class="lg-dot bad"></text>异常</text>
+      <text class="lg-total muted">本月累计 {{month}} 次</text>
+    </view>
+  </view>
+
+  <!-- 搜索与筛选 -->
+  <view class="search-bar">
+    <input class="search-input" placeholder="搜机房、说明、备注" placeholder-class="ph"
+           value="{{q}}" bindinput="onSearch" confirm-type="search" bindconfirm="onSearchNow" />
+    <view class="switch {{bad ? 'on' : ''}}" bindtap="toggleBad">
+      <text>仅异常</text>
+    </view>
+  </view>
+
+  <!-- 列表 -->
+  <view wx:if="{{state === 'loading'}}" class="state">
+    <view class="spinner"></view>
+    <view class="state-t">正在加载…</view>
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="state">
+    <view class="state-t">{{errMsg || '加载失败'}}</view>
+    <button class="btn btn-ghost btn-sm" bindtap="reload">重新加载</button>
+  </view>
+
+  <view wx:elif="{{state === 'empty'}}" class="state">
+    <view class="state-t">{{q || bad ? '没有符合条件的记录' : '还没有打卡记录'}}</view>
+    <view class="muted">到「打卡」页完成第一次现场巡检</view>
+  </view>
+
+  <block wx:else>
+    <view class="rec {{item.bad ? 'rec-bad' : ''}}" wx:for="{{list}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="goDetail">
+      <image class="rec-thumb" src="{{item.thumb}}" mode="aspectFill" wx:if="{{item.photo}}" />
+      <view class="rec-thumb rec-thumb-empty" wx:else>无图</view>
+      <view class="rec-body">
+        <view class="between">
+          <text class="rec-loc ellipsis">{{item.location}}</text>
+          <text class="rec-time">{{item.timeText}}</text>
+        </view>
+        <view class="rec-meta">{{item.inspText}}</view>
+        <view class="row wrap gap8 rec-tags">
+          <text class="tag tag-bad" wx:if="{{item.badText}}">异常：{{item.badText}}</text>
+          <text class="tag tag-gray" wx:if="{{item.customText}}">有说明</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="more muted" wx:if="{{hasMore}}">{{loadingMore ? '正在加载…' : '上拉加载更多'}}</view>
+    <view class="more muted" wx:else>共 {{total}} 条记录</view>
+  </block>
+
+</view>
