@@ -3,6 +3,19 @@
 移动端 H5 + Node/SQLite 轻量后端，内置机柜连线拓扑编辑器，附带微信小程序源码。
 本包为**通用迁移版**：不含任何真实数据、密钥、证书与固定密码，可在任意机器、任意目录全新部署。
 
+> **在线演示**：https://it-xiao-word.github.io/it-checkin-migrate/demo/ （纯前端，无需部署，数据存本机浏览器）
+> **图文介绍**：https://it-xiao-word.github.io/it-checkin-migrate/
+
+### 界面预览
+
+| 移动端打卡 | 我的记录 | 管理端 |
+|---|---|---|
+| ![打卡页](screenshots/01-checkin-mobile.png) | ![记录](screenshots/02-records-mobile.png) | ![管理端](screenshots/03-admin-desktop.png) |
+
+| 水印配置 | Excel 导出 | 机柜拓扑 |
+|---|---|---|
+| ![水印](screenshots/04-watermark-settings.png) | ![导出](screenshots/05-excel-export.png) | ![拓扑](screenshots/06-topology.png) |
+
 ---
 
 ## 一、包内有什么
@@ -17,6 +30,8 @@
 | `package.json` / `package-lock.json` | 依赖声明与锁定 |
 | `.env.example` | 环境变量模板 |
 | `install.sh` | 一键部署脚本（Linux） |
+| `demo/` | 纯前端静态演示（GitHub Pages 用，可本地直接打开体验） |
+| `screenshots/` | 界面截图 |
 | `README.md` | 本文档 |
 
 **不含**：`data/`（数据库、JWT 密钥）、`uploads/`（打卡照片）、`certs/`（证书）、`node_modules/`。
