@@ -1,0 +1,5 @@
+<view class="boot">
+  <view class="boot-logo">IT</view>
+  <view class="t32 strong c-primary">机房巡检打卡</view>
+  <view class="muted boot-tip">{{tip}}</view>
+</view>
