@@ -1,0 +1,127 @@
+.page { padding: 24rpx 24rpx 0; }
+
+/* 分段 */
+.tabs {
+  display: flex;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 8rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 10rpx rgba(31, 59, 90, 0.05);
+}
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 16rpx 0;
+  font-size: 27rpx;
+  color: #5a6474;
+  border-radius: 12rpx;
+}
+.tab.on {
+  background: #1F3B5A;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* 列表项 */
+.item {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 24rpx 26rpx;
+  margin-bottom: 14rpx;
+  box-shadow: 0 2rpx 10rpx rgba(31, 59, 90, 0.05);
+}
+.item-flat { margin-bottom: 0; box-shadow: none; border-radius: 0; }
+.item-t { font-size: 29rpx; font-weight: 600; color: #1f2329; }
+.item-s { font-size: 23rpx; color: #8a94a6; margin-top: 6rpx; }
+.arrow { font-size: 40rpx; color: #c3cbd6; line-height: 1; margin-left: 12rpx; }
+
+/* 模板卡 */
+.tpl {
+  background: #ffffff;
+  border-radius: 16rpx;
+  margin-bottom: 14rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 10rpx rgba(31, 59, 90, 0.05);
+}
+.tpl-body {
+  padding: 0 26rpx 22rpx;
+  border-top: 1rpx solid #f2f5f9;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  padding: 18rpx 0;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  background: #f2f5f9;
+  border-radius: 10rpx;
+  padding: 10rpx 16rpx;
+}
+.chip-t { font-size: 24rpx; color: #3b4657; }
+.chip-x {
+  font-size: 20rpx;
+  color: #a8b0bd;
+  padding: 2rpx 4rpx;
+}
+.add-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding-top: 6rpx;
+}
+.add-input {
+  flex: 1;
+  background: #f5f7fa;
+  border: 1rpx solid #e3e9f0;
+  border-radius: 12rpx;
+  padding: 14rpx 20rpx;
+  font-size: 25rpx;
+  height: 68rpx;
+}
+
+.picker { min-height: 84rpx; line-height: 44rpx; }
+.hint { padding: 16rpx 8rpx 0; line-height: 1.6; font-size: 22rpx; }
+
+.bottom-pad { height: 180rpx; }
+.bottom {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -2rpx 16rpx rgba(31, 59, 90, 0.08);
+}
+
+/* 弹层 */
+.mask {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(15, 25, 40, 0.45);
+  z-index: 10;
+}
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: #ffffff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 32rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 11;
+}
+.sheet-h {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1F3B5A;
+  margin-bottom: 28rpx;
+  text-align: center;
+}
+.sheet-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
