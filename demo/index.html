@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>在线演示 · IT 机房打卡服务</title>
+<style>
+:root{--blue:#1f6feb;--green:#1a7f37;--ink:#1f2933;--sub:#5b6b7b;--line:#e3e9ef;--bg:#f6f8fa}
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,"Microsoft YaHei",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7}
+.wrap{max-width:860px;margin:0 auto;padding:40px 20px 70px}
+h1{font-size:28px;margin:0 0 6px}.lead{color:var(--sub);margin:0 0 24px}
+.card{background:#fff;border:1px solid var(--line);border-radius:10px;padding:22px 26px;margin-bottom:16px}
+h2{font-size:17px;margin:0 0 12px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.entry{display:block;padding:16px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);transition:.15s}
+.entry:hover{border-color:var(--blue);box-shadow:0 4px 14px rgba(31,111,235,.12);transform:translateY(-2px)}
+.entry b{display:block;font-size:15px;margin-bottom:4px}.entry span{font-size:12px;color:var(--sub)}
+.roles{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}
+.role-btn{padding:10px 18px;border:1px solid var(--blue);color:var(--blue);background:#fff;border-radius:6px;cursor:pointer;font-size:14px}
+.role-btn.active{background:var(--blue);color:#fff}
+.note{background:#fff8c5;border-left:4px solid #d4a72c;padding:12px 16px;font-size:13px;margin-top:12px}
+a{color:var(--blue)}.back{display:inline-block;margin-bottom:18px;font-size:14px}
+code{background:#eff2f5;padding:2px 6px;border-radius:4px;font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<a class="back" href="../index.html">← 返回介绍页</a>
+<h1>🧪 在线演示</h1>
+<p class="lead">纯前端演示：无需部署后端，所有数据保存在你的浏览器本地，可放心交互。</p>
+
+<div class="card">
+<h2>① 选择演示身份</h2>
+<div class="roles">
+<button class="role-btn active" data-role="user" onclick="pick('user',this)">👤 现场人员（打卡 / 记录）</button>
+<button class="role-btn" data-role="admin" onclick="pick('admin',this)">🛠 管理员（看板 / 配置）</button>
+</div>
+<div class="note">当前身份：<b id="curRole">现场人员</b>。切换身份后进入对应页面；演示无密码校验。打卡/配置等修改只影响本机浏览器。</div>
+</div>
+
+<div class="card">
+<h2>② 进入演示页面</h2>
+<div class="grid">
+<a class="entry" href="./app/index.html"><b>📍 现场打卡</b><span>定位 · 拍照水印 · 巡检项</span></a>
+<a class="entry" href="./app/records.html"><b>📋 我的记录</b><span>趋势统计 · 搜索 · 导出</span></a>
+<a class="entry" href="./app/admin.html"><b>📊 管理端</b><span>数据看板 · 记录管理</span></a>
+<a class="entry" href="./app/rack-topology.html"><b>🗄 机柜拓扑</b><span>拖拽排布 · 连线 · 多机房</span></a>
+<a class="entry" href="./app/login.html"><b>🔐 登录页</b><span>演示账号任意密码可登录</span></a>
+<a class="entry" href="./app/change-password.html"><b>🔑 修改密码</b><span>演示模式不落库</span></a>
+</div>
+</div>
+
+<div class="card">
+<h2>说明</h2>
+<p>本页面通过 <code>demo/mock.js</code> 拦截所有 <code>/api/*</code> 请求，用种子数据模拟后端。已模拟 26 个接口，支持新增打卡、切换机房、编辑拓扑、配置水印等交互。</p>
+<p>数据存在浏览器 <code>localStorage</code>（键 <code>itck_demo_state_v1</code>），不上传任何服务器。点击顶部提示条的「重置数据」可恢复初始状态。</p>
+</div>
+</div>
+<script>
+function pick(role, el){
+  localStorage.setItem('itck_demo_role', role);
+  document.querySelectorAll('.role-btn').forEach(function(b){b.classList.remove('active');});
+  el.classList.add('active');
+  document.getElementById('curRole').textContent = role==='admin'?'管理员':'现场人员';
+}
+try{
+  var r=localStorage.getItem('itck_demo_role')||'user';
+  document.querySelector('[data-role="'+r+'"]').classList.add('active');
+  document.querySelector('[data-role="'+r+'"]').classList.remove('active');
+  document.querySelectorAll('.role-btn').forEach(function(b){if(b.dataset.role===r){b.classList.add('active');}else{b.classList.remove('active');}});
+  document.getElementById('curRole').textContent = r==='admin'?'管理员':'现场人员';
+}catch(e){}
+</script>
+</body>
+</html>
