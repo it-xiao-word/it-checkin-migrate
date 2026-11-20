@@ -1,0 +1,107 @@
+/* ============ 设计基座 ============
+ * 主色沿用管理端的深蓝 #1F3B5A，与 Web 端视觉保持一致
+ */
+page {
+  min-height: 100%;
+  background: #f2f5f9;
+  color: #1f2329;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 28rpx;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+view, text, input, textarea, button, scroll-view, image { box-sizing: border-box; }
+
+/* ---------- 布局 ---------- */
+.page-pad { padding: 24rpx; }
+.row { display: flex; align-items: center; }
+.between { display: flex; align-items: center; justify-content: space-between; }
+.col { display: flex; flex-direction: column; }
+.center { display: flex; align-items: center; justify-content: center; }
+.grow { flex: 1; min-width: 0; }
+.wrap { flex-wrap: wrap; }
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: #ffffff;
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 12rpx rgba(31, 59, 90, 0.06);
+}
+.card-tight { padding: 20rpx 24rpx; }
+.card-h {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 30rpx; font-weight: 600; color: #1F3B5A; margin-bottom: 20rpx;
+}
+.card-h .h-sub { font-size: 24rpx; font-weight: 400; color: #8a94a6; }
+
+/* ---------- 文本 ---------- */
+.muted { color: #8a94a6; font-size: 24rpx; }
+.strong { font-weight: 600; }
+.mono { font-family: Menlo, Consolas, monospace; }
+.c-primary { color: #1F3B5A; }
+.c-ok { color: #0F8A5F; }
+.c-bad { color: #C0392B; }
+.ellipsis { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.t28 { font-size: 28rpx; }
+.t24 { font-size: 24rpx; }
+.t32 { font-size: 32rpx; }
+.t36 { font-size: 36rpx; }
+
+/* ---------- 按钮 ---------- */
+.btn {
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  text-align: center;
+  padding: 0 32rpx;
+  border: none;
+}
+.btn::after { border: none; }
+.btn-primary { background: #1F3B5A; color: #ffffff; }
+.btn-primary[disabled] { background: #a8b4c4; color: #ffffff; }
+.btn-ghost { background: #ffffff; color: #1F3B5A; border: 1rpx solid #d5dde8; }
+.btn-danger { background: #ffffff; color: #C0392B; border: 1rpx solid #f0c8c4; }
+.btn-sm { height: 64rpx; line-height: 64rpx; font-size: 26rpx; padding: 0 24rpx; border-radius: 12rpx; }
+.btn-block { width: 100%; display: block; }
+.btn[disabled] { opacity: 0.75; }
+
+/* ---------- 表单 ---------- */
+.field { margin-bottom: 24rpx; }
+.field-l { font-size: 26rpx; color: #5a6474; margin-bottom: 12rpx; }
+.input, .textarea {
+  width: 100%;
+  background: #f5f7fa;
+  border: 1rpx solid #e3e9f0;
+  border-radius: 14rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+  color: #1f2329;
+}
+.textarea { height: 140rpx; width: 100%; }
+.ph { color: #a8b0bd; }
+
+/* ---------- 标签 ---------- */
+.tag { display: inline-block; padding: 4rpx 14rpx; border-radius: 8rpx; font-size: 22rpx; }
+.tag-ok { background: #e8f6f0; color: #0F8A5F; }
+.tag-bad { background: #fdecea; color: #C0392B; }
+.tag-gray { background: #eef1f5; color: #6b7585; }
+.tag-primary { background: #e8eef5; color: #1F3B5A; }
+
+/* ---------- loading / empty / error 三态 ---------- */
+.state { padding: 120rpx 40rpx; text-align: center; color: #8a94a6; }
+.state-t { font-size: 28rpx; margin-bottom: 28rpx; }
+.spinner {
+  width: 56rpx; height: 56rpx; margin: 0 auto 24rpx;
+  border: 4rpx solid #dde4ec; border-top-color: #1F3B5A;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- 分隔 ---------- */
+.divider { height: 1rpx; background: #eef1f5; margin: 20rpx 0; }
