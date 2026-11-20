@@ -1,0 +1,79 @@
+<view class="page">
+
+  <!-- 筛选 -->
+  <view class="card card-tight filter">
+    <input class="search-input" placeholder="搜机房 / 姓名 / 说明 / 备注" placeholder-class="ph"
+           value="{{q}}" bindinput="onSearch" confirm-type="search" bindconfirm="searchNow" />
+
+    <view class="filter-row">
+      <picker mode="date" value="{{from}}" bindchange="onFrom">
+        <view class="date-pick {{from ? '' : 'ph'}}">{{from || '开始日期'}}</view>
+      </picker>
+      <text class="muted">至</text>
+      <picker mode="date" value="{{to}}" bindchange="onTo">
+        <view class="date-pick {{to ? '' : 'ph'}}">{{to || '结束日期'}}</view>
+      </picker>
+      <view class="switch {{bad ? 'on' : ''}}" bindtap="toggleBad">仅异常</view>
+    </view>
+
+    <view class="filter-row">
+      <picker mode="selector" range="{{staffNames}}" value="{{staffIndex}}" bindchange="onStaff">
+        <view class="date-pick">{{staffNames[staffIndex]}}</view>
+      </picker>
+      <view class="grow"></view>
+      <text class="reset" bindtap="resetFilter">重置</text>
+    </view>
+  </view>
+
+  <view class="count muted">共 {{total}} 条{{bad ? '异常' : ''}}记录</view>
+
+  <!-- 列表 -->
+  <view wx:if="{{state === 'loading'}}" class="state">
+    <view class="spinner"></view>
+    <view class="state-t">正在加载…</view>
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="state">
+    <view class="state-t">{{errMsg || '加载失败'}}</view>
+    <button class="btn btn-ghost btn-sm" bindtap="reload">重新加载</button>
+  </view>
+
+  <view wx:elif="{{state === 'empty'}}" class="state">
+    <view class="state-t">没有符合条件的记录</view>
+    <view class="muted">调整筛选条件后重试</view>
+  </view>
+
+  <block wx:else>
+    <view class="rec {{item.bad ? 'rec-bad' : ''}}" wx:for="{{list}}" wx:key="id"
+          data-id="{{item.id}}" bindtap="goDetail">
+      <image class="rec-thumb" src="{{item.thumb}}" mode="aspectFill" wx:if="{{item.photo}}" />
+      <view class="rec-thumb rec-thumb-empty" wx:else>无图</view>
+      <view class="rec-body">
+        <view class="between">
+          <text class="rec-loc ellipsis">{{item.location}}</text>
+          <text class="rec-time">{{item.timeText}}</text>
+        </view>
+        <view class="rec-meta">{{item.nameText}}<text wx:if="{{item.badText}}"> · 异常：{{item.badText}}</text></view>
+        <view class="row wrap gap8 rec-tags">
+          <text class="tag tag-bad" wx:if="{{item.badText}}">{{item.badText}}</text>
+          <text class="tag tag-gray" wx:if="{{item.customText}}">有说明</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="more muted" wx:if="{{hasMore}}">{{loadingMore ? '正在加载…' : '上拉加载更多'}}</view>
+    <view class="more muted" wx:else>已到末尾</view>
+  </block>
+
+  <view class="bottom-pad"></view>
+
+  <!-- 导出 -->
+  <view class="bottom">
+    <view class="row gap12">
+      <button class="btn btn-primary btn-sm grow" bindtap="exportXlsx" disabled="{{exporting}}">
+        {{exporting ? '生成中…' : '导出 Excel（含照片）'}}
+      </button>
+      <button class="btn btn-ghost btn-sm" bindtap="exportLite" disabled="{{exporting}}">无照片</button>
+    </view>
+  </view>
+</view>
