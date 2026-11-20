@@ -1,0 +1,140 @@
+<view class="page">
+
+  <!-- 管理员提示 -->
+  <view class="banner" wx:if="{{isAdmin}}">
+    管理员账号不参与现场打卡，请到「我的」进入管理后台。
+  </view>
+
+  <!-- 成功提示 -->
+  <view class="notice" wx:if="{{notice}}">{{notice}}</view>
+
+  <!-- 今日概览 -->
+  <view class="statbar">
+    <view class="stat-item">
+      <view class="stat-n">{{stats.today}}</view>
+      <view class="stat-l">今日打卡</view>
+    </view>
+    <view class="stat-sep"></view>
+    <view class="stat-item">
+      <view class="stat-n {{stats.todayBad > 0 ? 'c-bad' : ''}}">{{stats.todayBad}}</view>
+      <view class="stat-l">今日异常</view>
+    </view>
+    <view class="stat-sep"></view>
+    <view class="stat-item">
+      <view class="stat-n">{{stats.month}}</view>
+      <view class="stat-l">本月累计</view>
+    </view>
+  </view>
+
+  <!-- 现场照片 -->
+  <view class="card">
+    <view class="card-h">
+      <text>现场照片</text>
+      <text class="h-sub" wx:if="{{photo}}">{{photoInfo}}</text>
+    </view>
+
+    <view class="shot" wx:if="{{!photo}}" bindtap="takePhoto">
+      <view class="shot-icon">+</view>
+      <view class="shot-t">拍照 / 从相册选择</view>
+      <view class="muted">自动加注水印并压缩，不影响清晰度</view>
+    </view>
+
+    <view class="canvas-wrap {{photo ? '' : 'hide'}}">
+      <canvas type="2d" id="photoCanvas" class="photo-canvas" style="height:{{previewH}}px"></canvas>
+    </view>
+
+    <view class="row gap12 shot-actions" wx:if="{{photo}}">
+      <button class="btn btn-ghost btn-sm grow" bindtap="takePhoto">重拍 / 换一张</button>
+    </view>
+  </view>
+
+  <!-- 机房与定位 -->
+  <view class="card">
+    <view class="field">
+      <view class="field-l">机房 / 位置</view>
+      <picker mode="selector" range="{{roomNames}}" value="{{roomIndex}}" bindchange="onRoom">
+        <view class="input picker {{location ? '' : 'ph'}}">{{location || '请选择机房 / 位置'}}</view>
+      </picker>
+    </view>
+
+    <view class="loc-row">
+      <view class="grow">
+        <view class="muted">定位</view>
+        <view class="loc-text {{locState === 'ok' ? 'c-ok' : (locState === 'fail' ? 'c-bad' : '')}}">{{locText}}</view>
+      </view>
+      <button class="btn btn-ghost btn-sm" bindtap="getLocation" disabled="{{locating}}">
+        {{locating ? '定位中…' : '获取定位'}}
+      </button>
+    </view>
+  </view>
+
+  <!-- 巡检项目 -->
+  <view class="card" wx:if="{{inspect.length > 0}}">
+    <view class="card-h">
+      <text>巡检项目</text>
+      <text class="h-sub">{{inspectDone}} / {{inspect.length}} 已完成</text>
+    </view>
+    <view class="insp-item" wx:for="{{inspect}}" wx:key="itemId">
+      <view class="insp-name">{{item.name}}</view>
+      <view class="seg">
+        <view class="seg-btn {{item.status === 'ok' ? 'on-ok' : ''}}"
+              data-i="{{index}}" data-s="ok" bindtap="setStatus">正常</view>
+        <view class="seg-btn {{item.status === 'bad' ? 'on-bad' : ''}}"
+              data-i="{{index}}" data-s="bad" bindtap="setStatus">不正常</view>
+      </view>
+    </view>
+  </view>
+  <view class="card" wx:elif="{{location}}">
+    <view class="muted">该机房未配置巡检项目，可直接拍照打卡。</view>
+  </view>
+
+  <!-- 说明与备注 -->
+  <view class="card">
+    <view class="field">
+      <view class="field-l">
+        巡检说明
+        <text class="c-bad" wx:if="{{needCustom}}">（存在异常项，必填）</text>
+      </view>
+      <textarea class="textarea" placeholder="异常现象、影响范围、现场处理情况等"
+                placeholder-class="ph" value="{{customText}}" bindinput="onCustom"
+                maxlength="500" auto-height="{{false}}"></textarea>
+    </view>
+    <view class="field" style="margin-bottom:0">
+      <view class="field-l">备注（可选）</view>
+      <input class="input" placeholder="其他需要记录的信息" placeholder-class="ph"
+             value="{{note}}" bindinput="onNote" maxlength="60" />
+    </view>
+  </view>
+
+  <!-- 水印样式 -->
+  <view class="card">
+    <view class="field" style="margin-bottom:{{allowCustom ? '24rpx' : '0'}}">
+      <view class="field-l">水印样式</view>
+      <picker mode="selector" range="{{wmNames}}" value="{{wmIndex}}" bindchange="onWm">
+        <view class="input picker">{{wmCurName}}</view>
+      </picker>
+    </view>
+
+    <block wx:if="{{allowCustom}}">
+      <view class="field">
+        <view class="field-l">自定义标题（留空用模板默认）</view>
+        <input class="input" placeholder="{{wmDefaultTitle}}" placeholder-class="ph"
+               value="{{customTitle}}" bindinput="onTitle" maxlength="24" />
+      </view>
+      <view class="field" style="margin-bottom:0">
+        <view class="field-l">自定义副标题</view>
+        <input class="input" placeholder="如：项目组 / 班次" placeholder-class="ph"
+               value="{{customOrg}}" bindinput="onOrg" maxlength="28" />
+      </view>
+    </block>
+  </view>
+
+  <view class="bottom-pad"></view>
+
+  <view class="bottom">
+    <button class="btn btn-primary btn-block" bindtap="submit"
+            loading="{{submitting}}" disabled="{{submitting}}">
+      {{submitting ? submitText : '提交打卡'}}
+    </button>
+  </view>
+</view>
