@@ -35,8 +35,15 @@
   .lightbox:target { display:flex; }
   .lightbox img { max-width:100%; max-height:100%; border-radius:6px; box-shadow:0 10px 40px rgba(0,0,0,.5); }
   .lightbox .close { position:absolute; top:20px; right:28px; color:#fff; font-size:34px; text-decoration:none; line-height:1; }
+  .reward { display:flex; align-items:center; gap:28px; flex-wrap:wrap; }
+  .reward img { width:200px; max-width:100%; border-radius:8px; box-shadow:0 3px 14px rgba(0,0,0,.12); cursor:zoom-in; transition:transform .15s; }
+  .reward img:hover { transform:scale(1.03); }
+  .reward .rtxt { flex:1 1 240px; }
+  .reward .rtxt p { margin:0 0 10px; color:var(--sub); font-size:14px; }
+  .reward .rtxt b { color:var(--ink); }
+  .reward .heart { color:#e05561; }
   footer { color:var(--sub); font-size:13px; text-align:center; margin-top:36px; }
-  @media(max-width:720px){ .gallery { grid-template-columns:repeat(2,1fr); } h1 { font-size:26px; } }
+  @media(max-width:720px){ .gallery { grid-template-columns:repeat(2,1fr); } h1 { font-size:26px; } .reward { gap:16px; } .reward img { width:170px; } }
 </style>
 </head>
 <body>
@@ -101,6 +108,17 @@ tar xzf itck-data.tar.gz -C /opt/it-checkin
 sudo systemctl start it-checkin</code></pre>
   </div>
 
+  <div class="card">
+    <h2>☕ 支持作者</h2>
+    <div class="reward">
+      <a href="#imgR"><img src="./reward.jpg" alt="赞赏码"></a>
+      <div class="rtxt">
+        <p>如果这个工具帮你省了时间，欢迎 <b>扫码请作者喝杯咖啡</b> <span class="heart">♥</span></p>
+        <p>你的支持是我持续维护和更新功能的动力。点击左侧二维码可放大扫码。</p>
+      </div>
+    </div>
+  </div>
+
   <footer>仅供个人与内部运维使用 · 部署后请立即修改管理员密码并妥善备份 data/ 与 uploads/</footer>
 </div>
 
@@ -110,5 +128,6 @@ sudo systemctl start it-checkin</code></pre>
 <div id="img4" class="lightbox"><a href="#" class="close">×</a><img src="./screenshots/04-watermark-settings.png" alt="水印设置"></div>
 <div id="img5" class="lightbox"><a href="#" class="close">×</a><img src="./screenshots/05-excel-export.png" alt="Excel 导出"></div>
 <div id="img6" class="lightbox"><a href="#" class="close">×</a><img src="./screenshots/06-topology.png" alt="机柜拓扑"></div>
+<div id="imgR" class="lightbox"><a href="#" class="close">×</a><img src="./reward.jpg" alt="赞赏码"></div>
 </body>
 </html>
