@@ -1,0 +1,118 @@
+.page { padding: 24rpx 24rpx 0; }
+
+/* 凭据卡 */
+.cred {
+  background: #fff8e8;
+  border: 1rpx solid #f0d9a8;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 20rpx;
+}
+.cred-h {
+  font-size: 27rpx;
+  font-weight: 600;
+  color: #8a5a00;
+  margin-bottom: 16rpx;
+}
+.cred-row {
+  display: flex;
+  align-items: center;
+  padding: 8rpx 0;
+}
+.cred-k {
+  width: 100rpx;
+  font-size: 24rpx;
+  color: #a07b3a;
+  flex-shrink: 0;
+}
+.cred-v {
+  font-size: 28rpx;
+  color: #3b4657;
+  word-break: break-all;
+}
+.cred-pw {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #C0392B;
+  letter-spacing: 1rpx;
+}
+.cred-ops { margin-top: 16rpx; }
+.cred-tip { margin-top: 12rpx; font-size: 22rpx; }
+
+/* 账号行 */
+.user {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: #ffffff;
+  border-radius: 16rpx;
+  padding: 22rpx 24rpx;
+  margin-bottom: 14rpx;
+  box-shadow: 0 2rpx 10rpx rgba(31, 59, 90, 0.05);
+}
+.avatar {
+  width: 76rpx;
+  height: 76rpx;
+  border-radius: 50%;
+  background: #e8eef5;
+  color: #1F3B5A;
+  font-size: 30rpx;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.avatar-admin { background: #f7edd6; color: #8a5a00; }
+.user-n { font-size: 28rpx; font-weight: 600; color: #1f2329; }
+.user-s { font-size: 22rpx; color: #8a94a6; margin-top: 6rpx; }
+.user-ops {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+.op { font-size: 23rpx; color: #5a7fa8; padding: 4rpx; }
+.op-del { color: #C0392B; }
+
+.picker { min-height: 84rpx; line-height: 44rpx; }
+.hint { padding: 16rpx 8rpx 0; line-height: 1.6; font-size: 22rpx; }
+
+.bottom-pad { height: 180rpx; }
+.bottom {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 -2rpx 16rpx rgba(31, 59, 90, 0.08);
+}
+
+.mask {
+  position: fixed;
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(15, 25, 40, 0.45);
+  z-index: 10;
+}
+.sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: #ffffff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 32rpx 32rpx calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 11;
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.sheet-h {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #1F3B5A;
+  text-align: center;
+  margin-bottom: 28rpx;
+}
+.sheet-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 8rpx;
+}
