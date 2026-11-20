@@ -1,0 +1,102 @@
+<view class="page">
+
+  <!-- 新建/重置后的凭据 -->
+  <view class="cred" wx:if="{{credential}}">
+    <view class="cred-h">请把初始密码转交给本人</view>
+    <view class="cred-row">
+      <text class="cred-k">账号</text>
+      <text class="cred-v mono">{{credential.username}}</text>
+    </view>
+    <view class="cred-row">
+      <text class="cred-k">密码</text>
+      <text class="cred-v mono cred-pw">{{credential.password}}</text>
+    </view>
+    <view class="row gap12 cred-ops">
+      <button class="btn btn-ghost btn-sm grow" bindtap="copyCred">复制密码</button>
+      <button class="btn btn-ghost btn-sm" bindtap="dismissCred">关闭</button>
+    </view>
+    <view class="muted cred-tip">本人首次登录后会被强制修改密码。</view>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="state">
+    <view class="spinner"></view>
+    <view class="state-t">正在加载…</view>
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="state">
+    <view class="state-t">{{errMsg || '加载失败'}}</view>
+    <button class="btn btn-ghost btn-sm" bindtap="load">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <view class="user" wx:for="{{list}}" wx:key="id">
+      <view class="avatar {{item.role === 'admin' ? 'avatar-admin' : ''}}">{{item.initial}}</view>
+      <view class="grow">
+        <view class="row gap8">
+          <text class="user-n">{{item.display_name || item.username}}</text>
+          <text class="tag {{item.role === 'admin' ? 'tag-primary' : 'tag-gray'}}">{{item.role === 'admin' ? '管理员' : '巡检员'}}</text>
+          <text class="tag tag-bad" wx:if="{{item.must_change_pw}}">待改密</text>
+        </view>
+        <view class="user-s">{{item.username}}<text wx:if="{{item.staff_id}}"> · 工号 {{item.staff_id}}</text></view>
+      </view>
+      <view class="user-ops">
+        <text class="op" data-id="{{item.id}}" data-u="{{item.username}}" bindtap="resetPw">重置</text>
+        <text class="op op-del" data-id="{{item.id}}" bindtap="removeUser">删除</text>
+      </view>
+    </view>
+
+    <view class="card card-tight" wx:if="{{list.length === 0}}">
+      <view class="muted">还没有账号。</view>
+    </view>
+
+    <view class="hint muted">删除账号不会删除其历史打卡记录。管理员账号不参与现场打卡。</view>
+  </block>
+
+  <view class="bottom-pad"></view>
+
+  <view class="bottom">
+    <button class="btn btn-primary btn-block" bindtap="openAdd">＋ 新建账号</button>
+  </view>
+
+  <!-- 新建弹层 -->
+  <view class="mask" wx:if="{{edit.show}}" bindtap="closeEdit"></view>
+  <view class="sheet" wx:if="{{edit.show}}">
+    <view class="sheet-h">新建账号</view>
+
+    <view class="field">
+      <view class="field-l">登录账号</view>
+      <input class="input" placeholder="字母或数字，登录时使用" placeholder-class="ph"
+             value="{{edit.username}}" bindinput="onUsername" maxlength="32" />
+    </view>
+
+    <view class="field">
+      <view class="field-l">姓名</view>
+      <input class="input" placeholder="显示在打卡记录中" placeholder-class="ph"
+             value="{{edit.displayName}}" bindinput="onDisplayName" maxlength="32" />
+    </view>
+
+    <view class="field">
+      <view class="field-l">工号（可选）</view>
+      <input class="input" placeholder="如 IT-001" placeholder-class="ph"
+             value="{{edit.staffId}}" bindinput="onStaffId" maxlength="32" />
+    </view>
+
+    <view class="field">
+      <view class="field-l">角色</view>
+      <picker mode="selector" range="{{roleNames}}" value="{{edit.roleIndex}}" bindchange="onRole">
+        <view class="input picker">{{roleNames[edit.roleIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <view class="field-l">初始密码（留空自动生成）</view>
+      <input class="input" placeholder="至少 6 位" placeholder-class="ph"
+             value="{{edit.password}}" bindinput="onPassword" maxlength="32" />
+    </view>
+
+    <view class="sheet-actions">
+      <button class="btn btn-ghost btn-sm grow" bindtap="closeEdit">取消</button>
+      <button class="btn btn-primary btn-sm grow" bindtap="save" loading="{{saving}}" disabled="{{saving}}">创建</button>
+    </view>
+  </view>
+</view>
