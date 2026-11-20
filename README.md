@@ -16,6 +16,12 @@
 |---|---|---|
 | ![水印](screenshots/04-watermark-settings.png) | ![导出](screenshots/05-excel-export.png) | ![拓扑](screenshots/06-topology.png) |
 
+### ☕ 支持作者
+
+如果这个工具帮你省了时间，欢迎扫码请作者喝杯咖啡，你的支持是持续维护的动力：
+
+<img src="reward.jpg" alt="赞赏码" width="200" />
+
 ---
 
 ## 一、包内有什么
