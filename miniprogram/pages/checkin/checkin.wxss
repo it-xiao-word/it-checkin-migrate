@@ -1,0 +1,158 @@
+.page {
+  padding: 24rpx 24rpx 0;
+}
+
+/* ---------- 提示条 ---------- */
+.banner {
+  background: #fff6e5;
+  color: #8a5a00;
+  font-size: 25rpx;
+  line-height: 1.5;
+  padding: 18rpx 22rpx;
+  border-radius: 14rpx;
+  margin-bottom: 20rpx;
+}
+.notice {
+  background: #e8f6f0;
+  color: #0F8A5F;
+  font-size: 25rpx;
+  line-height: 1.5;
+  padding: 18rpx 22rpx;
+  border-radius: 14rpx;
+  margin-bottom: 20rpx;
+}
+
+/* ---------- 统计条 ---------- */
+.statbar {
+  display: flex;
+  align-items: center;
+  background: #1F3B5A;
+  border-radius: 20rpx;
+  padding: 26rpx 12rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 6rpx 20rpx rgba(31, 59, 90, 0.18);
+}
+.stat-item { flex: 1; text-align: center; }
+.stat-n {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
+}
+.stat-n.c-bad { color: #ff9b8f; }
+.stat-l {
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.66);
+  margin-top: 4rpx;
+}
+.stat-sep {
+  width: 1rpx;
+  height: 48rpx;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+/* ---------- 拍照区 ---------- */
+.shot {
+  border: 2rpx dashed #c6d2e0;
+  border-radius: 16rpx;
+  padding: 56rpx 20rpx;
+  text-align: center;
+  background: #fafcff;
+}
+.shot-icon {
+  width: 88rpx;
+  height: 88rpx;
+  margin: 0 auto 16rpx;
+  border-radius: 50%;
+  background: #e8eef5;
+  color: #1F3B5A;
+  font-size: 52rpx;
+  line-height: 84rpx;
+  font-weight: 300;
+}
+.shot-t {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1F3B5A;
+  margin-bottom: 6rpx;
+}
+
+.canvas-wrap {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 14rpx;
+  background: #eef1f5;
+}
+.canvas-wrap.hide { height: 0; }
+.photo-canvas { width: 100%; display: block; }
+.shot-actions { margin-top: 20rpx; }
+
+/* ---------- 定位 ---------- */
+.loc-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding-top: 18rpx;
+  border-top: 1rpx solid #eef1f5;
+}
+.loc-text {
+  font-size: 27rpx;
+  margin-top: 4rpx;
+  color: #3b4657;
+  word-break: break-all;
+}
+
+.picker { min-height: 84rpx; line-height: 44rpx; }
+
+/* ---------- 巡检项 ---------- */
+.insp-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 0;
+  border-top: 1rpx solid #f2f5f9;
+}
+.insp-item:first-of-type { border-top: none; }
+.insp-name {
+  font-size: 28rpx;
+  color: #2b3444;
+  flex: 1;
+  min-width: 0;
+  margin-right: 16rpx;
+}
+.seg {
+  display: flex;
+  border: 1rpx solid #d5dde8;
+  border-radius: 12rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.seg-btn {
+  padding: 12rpx 26rpx;
+  font-size: 25rpx;
+  color: #5a6474;
+  background: #ffffff;
+}
+.seg-btn + .seg-btn { border-left: 1rpx solid #d5dde8; }
+.seg-btn.on-ok {
+  background: #0F8A5F;
+  color: #ffffff;
+  border-color: #0F8A5F;
+}
+.seg-btn.on-bad {
+  background: #C0392B;
+  color: #ffffff;
+  border-color: #C0392B;
+}
+
+/* ---------- 底部提交 ---------- */
+.bottom-pad { height: 180rpx; }
+.bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 20rpx 24rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -2rpx 16rpx rgba(31, 59, 90, 0.08);
+}
