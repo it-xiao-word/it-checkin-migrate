@@ -1,0 +1,34 @@
+<view class="page">
+
+  <!-- 账号卡 -->
+  <view class="hero">
+    <view class="avatar">{{initial}}</view>
+    <view class="hero-body">
+      <view class="hero-name">{{me.displayName || me.username || '-'}}</view>
+      <view class="hero-sub">
+        <text>账号 {{me.username || '-'}}</text>
+        <text wx:if="{{me.staffId}}"> · 工号 {{me.staffId}}</text>
+      </view>
+    </view>
+    <view class="role {{isAdmin ? 'role-admin' : ''}}">{{isAdmin ? '管理员' : '巡检员'}}</view>
+  </view>
+
+  <!-- 功能入口 -->
+  <view class="group" wx:for="{{menuGroups}}" wx:key="key" wx:for-item="g">
+    <view class="group-t">{{g.title}}</view>
+    <view class="card card-tight">
+      <view class="menu-item" wx:for="{{g.items}}" wx:key="key" wx:for-item="it"
+            data-path="{{it.path}}" bindtap="onMenu">
+        <view class="grow">
+          <view class="menu-t">{{it.text}}</view>
+          <view class="muted">{{it.desc}}</view>
+        </view>
+        <view class="arrow">›</view>
+      </view>
+    </view>
+  </view>
+
+  <button class="btn btn-danger btn-block logout" bindtap="logout">退出登录</button>
+
+  <view class="foot muted">IT 机房运维 · 现场巡检留痕系统</view>
+</view>
