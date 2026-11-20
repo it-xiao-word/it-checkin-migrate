@@ -1,0 +1,119 @@
+<view class="page">
+
+  <view wx:if="{{state === 'loading'}}" class="state">
+    <view class="spinner"></view>
+    <view class="state-t">正在加载…</view>
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="state">
+    <view class="state-t">{{errMsg || '加载失败'}}</view>
+    <button class="btn btn-ghost btn-sm" bindtap="load">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <view class="muted tip">水印在打卡拍照时直接烧进照片，任何人拿到图片都能看到当时的时间、位置与巡检结论。</view>
+
+    <view class="tpl" wx:for="{{list}}" wx:key="id">
+      <view class="tpl-main" data-id="{{item.id}}" bindtap="editTpl">
+        <view class="swatch" style="background:{{item.config.accent}}"></view>
+        <view class="grow">
+          <view class="row gap8">
+            <text class="tpl-n">{{item.name}}</text>
+            <text class="tag tag-primary" wx:if="{{item.isDefault}}">默认</text>
+          </view>
+          <view class="tpl-s">{{item.config.title}}</view>
+        </view>
+        <view class="arrow">›</view>
+      </view>
+      <view class="tpl-ops">
+        <text class="op" data-id="{{item.id}}" bindtap="setDefault" wx:if="{{!item.isDefault}}">设为默认</text>
+        <text class="op op-del" data-id="{{item.id}}" bindtap="removeTpl">删除</text>
+      </view>
+    </view>
+
+    <view class="card card-tight" wx:if="{{list.length === 0}}">
+      <view class="muted">还没有水印模板，点下方按钮创建第一套。</view>
+    </view>
+  </block>
+
+  <view class="bottom-pad"></view>
+
+  <view class="bottom">
+    <button class="btn btn-primary btn-block" bindtap="openAdd">＋ 新建水印模板</button>
+  </view>
+
+  <!-- 编辑弹层 -->
+  <view class="mask" wx:if="{{edit.show}}" bindtap="closeEdit"></view>
+  <view class="sheet" wx:if="{{edit.show}}">
+    <view class="sheet-h">{{edit.id > 0 ? '编辑水印模板' : '新建水印模板'}}</view>
+
+    <scroll-view scroll-y class="sheet-body">
+      <view class="field">
+        <view class="field-l">模板名称</view>
+        <input class="input" placeholder="如 标准打卡水印" placeholder-class="ph"
+               value="{{edit.name}}" bindinput="onName" maxlength="24" />
+      </view>
+
+      <view class="field">
+        <view class="field-l">标题</view>
+        <input class="input" placeholder="照片左上角主标题" placeholder-class="ph"
+               value="{{edit.cfg.title}}" bindinput="onTitle" maxlength="24" />
+      </view>
+
+      <view class="field">
+        <view class="field-l">副标题（可选）</view>
+        <input class="input" placeholder="如 浙大科创中心 · 运维组" placeholder-class="ph"
+               value="{{edit.cfg.org}}" bindinput="onOrg" maxlength="28" />
+      </view>
+
+      <view class="field">
+        <view class="field-l">主题色</view>
+        <view class="colors">
+          <view class="color {{edit.cfg.accent === c ? 'on' : ''}}" wx:for="{{colors}}" wx:for-item="c" wx:key="*this"
+                style="background:{{c}}" data-c="{{c}}" bindtap="onColor"></view>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="field-l">照片上显示的内容</view>
+        <view class="sw-row">
+          <text class="sw-t">打卡时间</text>
+          <switch checked="{{edit.cfg.showTime}}" data-k="showTime" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+        <view class="sw-row">
+          <text class="sw-t">坐标与精度</text>
+          <switch checked="{{edit.cfg.showCoord}}" data-k="showCoord" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+        <view class="sw-row">
+          <text class="sw-t">人员与工号</text>
+          <switch checked="{{edit.cfg.showStaff}}" data-k="showStaff" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+        <view class="sw-row">
+          <text class="sw-t">机房 / 位置</text>
+          <switch checked="{{edit.cfg.showLocation}}" data-k="showLocation" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+        <view class="sw-row">
+          <text class="sw-t">巡检结果</text>
+          <switch checked="{{edit.cfg.showInspect}}" data-k="showInspect" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+        <view class="sw-row">
+          <text class="sw-t">巡检说明</text>
+          <switch checked="{{edit.cfg.showCustom}}" data-k="showCustom" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+        <view class="sw-row">
+          <text class="sw-t">备注</text>
+          <switch checked="{{edit.cfg.showNote}}" data-k="showNote" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+        <view class="sw-row">
+          <text class="sw-t">允许打卡人自定义标题</text>
+          <switch checked="{{edit.cfg.allowCustom}}" data-k="allowCustom" bindchange="onSwitch" color="#1F3B5A" />
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="sheet-actions">
+      <button class="btn btn-ghost btn-sm grow" bindtap="closeEdit">取消</button>
+      <button class="btn btn-primary btn-sm grow" bindtap="save" loading="{{saving}}" disabled="{{saving}}">保存</button>
+    </view>
+  </view>
+</view>
