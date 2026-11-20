@@ -1,0 +1,62 @@
+<view class="page">
+
+  <view class="statbar">
+    <view class="stat-item">
+      <view class="stat-n">{{stats.today}}</view>
+      <view class="stat-l">今日打卡</view>
+    </view>
+    <view class="stat-sep"></view>
+    <view class="stat-item">
+      <view class="stat-n {{stats.todayBad > 0 ? 'warn' : ''}}">{{stats.todayBad}}</view>
+      <view class="stat-l">今日异常</view>
+    </view>
+    <view class="stat-sep"></view>
+    <view class="stat-item">
+      <view class="stat-n">{{stats.month}}</view>
+      <view class="stat-l">本月打卡</view>
+    </view>
+    <view class="stat-sep"></view>
+    <view class="stat-item">
+      <view class="stat-n {{stats.monthBad > 0 ? 'warn' : ''}}">{{stats.monthBad}}</view>
+      <view class="stat-l">本月异常</view>
+    </view>
+  </view>
+
+  <!-- 近 7 日趋势 -->
+  <view class="card">
+    <view class="card-h">
+      <text>近 7 日全站巡检</text>
+      <text class="h-sub">最后打卡 {{lastText}}</text>
+    </view>
+    <view class="spark">
+      <view class="spark-col" wx:for="{{trend}}" wx:key="date">
+        <view class="spark-wrap">
+          <view class="spark-bar {{item.total === 0 ? 'zero' : ''}}" style="height:{{item.h}}%">
+            <view class="spark-bad" wx:if="{{item.badH > 0}}" style="height:{{item.badH}}%"></view>
+          </view>
+        </view>
+        <view class="spark-n">{{item.total}}</view>
+        <view class="spark-x {{item.isToday ? 'today' : ''}}">{{item.label}}</view>
+      </view>
+    </view>
+    <view class="spark-legend">
+      <text class="lg-item"><text class="lg-dot normal"></text>正常</text>
+      <text class="lg-item"><text class="lg-dot bad"></text>异常</text>
+    </view>
+  </view>
+
+  <!-- 功能宫格 -->
+  <view class="grid">
+    <view class="tile" wx:for="{{menu}}" wx:key="key" data-path="{{item.path}}" bindtap="onTile">
+      <view class="tile-icon">{{item.icon}}</view>
+      <view class="tile-t">{{item.text}}</view>
+      <view class="tile-d">{{item.desc}}</view>
+    </view>
+  </view>
+
+  <view class="quick">
+    <button class="btn btn-primary btn-block" bindtap="goRecords">查看全部记录并导出</button>
+  </view>
+
+  <view class="foot muted">IT 机房运维 · 管理后台</view>
+</view>
