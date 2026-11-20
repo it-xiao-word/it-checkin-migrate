@@ -1,0 +1,150 @@
+<view class="page">
+
+  <!-- 分段 -->
+  <view class="tabs">
+    <view class="tab {{tab === 'rooms' ? 'on' : ''}}" data-t="rooms" bindtap="onTab">机房</view>
+    <view class="tab {{tab === 'groups' ? 'on' : ''}}" data-t="groups" bindtap="onTab">分组</view>
+    <view class="tab {{tab === 'templates' ? 'on' : ''}}" data-t="templates" bindtap="onTab">模板</view>
+    <view class="tab {{tab === 'staff' ? 'on' : ''}}" data-t="staff" bindtap="onTab">人员</view>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="state">
+    <view class="spinner"></view>
+    <view class="state-t">正在加载…</view>
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="state">
+    <view class="state-t">{{errMsg || '加载失败'}}</view>
+    <button class="btn btn-ghost btn-sm" bindtap="loadAll">重新加载</button>
+  </view>
+
+  <block wx:else>
+    <!-- 机房 -->
+    <block wx:if="{{tab === 'rooms'}}">
+      <view class="card card-tight" wx:if="{{rooms.length === 0}}">
+        <view class="muted">还没有机房，点下方按钮添加。打卡页只能选择这里配置过的机房。</view>
+      </view>
+      <view class="item" wx:for="{{rooms}}" wx:key="id" data-id="{{item.id}}" bindtap="editRoom">
+        <view class="grow">
+          <view class="item-t">{{item.name}}</view>
+          <view class="item-s">{{item.sub}}</view>
+        </view>
+        <view class="arrow">›</view>
+      </view>
+    </block>
+
+    <!-- 分组 -->
+    <block wx:elif="{{tab === 'groups'}}">
+      <view class="card card-tight" wx:if="{{groups.length === 0}}">
+        <view class="muted">分组用于让多个机房复用同一套巡检模板。先建模板，再建分组，最后把机房归入分组。</view>
+      </view>
+      <view class="item" wx:for="{{groups}}" wx:key="id" data-id="{{item.id}}" bindtap="editGroup">
+        <view class="grow">
+          <view class="item-t">{{item.name}}</view>
+          <view class="item-s">{{item.sub}}</view>
+        </view>
+        <view class="arrow">›</view>
+      </view>
+    </block>
+
+    <!-- 巡检模板 -->
+    <block wx:elif="{{tab === 'templates'}}">
+      <view class="card card-tight" wx:if="{{templates.length === 0}}">
+        <view class="muted">还没有巡检模板。模板是一组巡检项目，例如「标准机房巡检」。</view>
+      </view>
+
+      <view class="tpl" wx:for="{{templates}}" wx:key="id">
+        <view class="item item-flat" data-id="{{item.id}}" bindtap="editTemplate">
+          <view class="grow">
+            <view class="item-t">{{item.name}}</view>
+            <view class="item-s">{{item.sub}}</view>
+          </view>
+          <view class="arrow">›</view>
+        </view>
+
+        <view class="tpl-body">
+          <view class="chips" wx:if="{{item.items.length > 0}}">
+            <view class="chip" wx:for="{{item.items}}" wx:for-item="it" wx:key="id">
+              <text class="chip-t">{{it.name}}</text>
+              <text class="chip-x" data-tid="{{item.id}}" data-iid="{{it.id}}" catchtap="delItem">✕</text>
+            </view>
+          </view>
+          <view class="muted" wx:else>该模板还没有巡检项目</view>
+
+          <view class="add-item">
+            <input class="add-input" placeholder="新巡检项目名称，如 机房温度"
+                   placeholder-class="ph" value="{{newItemName}}" bindinput="onNewItemName"
+                   data-tid="{{item.id}}" bindfocus="onFocusTpl" maxlength="24" />
+            <button class="btn btn-ghost btn-sm" data-tid="{{item.id}}" bindtap="addItem">添加</button>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 人员 -->
+    <block wx:else>
+      <view class="card card-tight" wx:if="{{staff.length === 0}}">
+        <view class="muted">人员列表用于管理端按人筛选记录。</view>
+      </view>
+      <view class="item" wx:for="{{staff}}" wx:key="id" data-id="{{item.id}}" bindtap="editStaff">
+        <view class="grow">
+          <view class="item-t">{{item.name}}</view>
+          <view class="item-s">{{item.sub}}</view>
+        </view>
+        <view class="arrow">›</view>
+      </view>
+    </block>
+
+    <view class="hint muted">{{hint}}</view>
+  </block>
+
+  <view class="bottom-pad"></view>
+
+  <view class="bottom">
+    <button class="btn btn-primary btn-block" bindtap="openAdd">＋ {{addText}}</button>
+  </view>
+
+  <!-- 编辑弹层 -->
+  <view class="mask" wx:if="{{edit.show}}" bindtap="closeEdit"></view>
+  <view class="sheet" wx:if="{{edit.show}}">
+    <view class="sheet-h">{{edit.title}}</view>
+
+    <view class="field">
+      <view class="field-l">{{edit.type === 'staff' ? '姓名' : '名称'}}</view>
+      <input class="input" placeholder="请输入" placeholder-class="ph"
+             value="{{edit.name}}" bindinput="onEditName" maxlength="64" />
+    </view>
+
+    <view class="field" wx:if="{{edit.type === 'room'}}">
+      <view class="field-l">所属分组</view>
+      <picker mode="selector" range="{{groupNames}}" value="{{editGroupIndex}}" bindchange="onEditGroup">
+        <view class="input picker">{{groupNames[editGroupIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field" wx:if="{{edit.type === 'group'}}">
+      <view class="field-l">使用的巡检模板</view>
+      <picker mode="selector" range="{{templateNames}}" value="{{editTemplateIndex}}" bindchange="onEditTemplate">
+        <view class="input picker">{{templateNames[editTemplateIndex]}}</view>
+      </picker>
+    </view>
+
+    <view class="field" wx:if="{{edit.type === 'template'}}">
+      <view class="field-l">说明（可选）</view>
+      <input class="input" placeholder="这套模板的适用范围" placeholder-class="ph"
+             value="{{edit.desc}}" bindinput="onEditDesc" maxlength="60" />
+    </view>
+
+    <view class="field" wx:if="{{edit.type === 'staff'}}">
+      <view class="field-l">工号（可选）</view>
+      <input class="input" placeholder="如 IT-001" placeholder-class="ph"
+             value="{{edit.staffId}}" bindinput="onEditStaffId" maxlength="32" />
+    </view>
+
+    <view class="sheet-actions">
+      <button class="btn btn-ghost btn-sm grow" bindtap="closeEdit">取消</button>
+      <button class="btn btn-danger btn-sm" wx:if="{{edit.id > 0}}" bindtap="removeEdit" disabled="{{saving}}">删除</button>
+      <button class="btn btn-primary btn-sm grow" bindtap="saveEdit" loading="{{saving}}" disabled="{{saving}}">保存</button>
+    </view>
+  </view>
+</view>
